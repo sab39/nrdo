@@ -1,0 +1,1093 @@
+template {
+
+  eval csharp4-global.cgl;
+  
+  define {
+
+    # Import some generally-useful definitions for csharp.
+    import [csharp4-common.cgl];
+    use class_naming;
+
+	# Declare where we will write to.
+  } outfile {sep / {when $module$ initcap intercap . subst : /. $module$; $dbobject$.dfn.gen.cs}} define {
+
+    # Import some generally-useful stuff for sql.
+    import [sql-$dbadapter$.cgl];
+    use table_naming;
+    use csharp_support;
+
+    # This needs to be declared for use by field_processing.
+    set tblalias [self];
+
+    # This is just handy to have around :)
+    set fqdbobject sep : {when $module$ $module$; $dbobject$};
+
+    # Do that stuff for every place we are likely to encounter a field or param.
+    inside {
+      fields;
+      gets {fields; params};
+      references {arguments; mappedfields};
+    } given {type; nullable; fname; tblalias; fielddesc; sqltype} {
+      use field_processing;
+    };
+
+    inside gets given {
+      fields; params; gname; getdesc; multi; tables; orderby
+    } {
+
+      # Construct "arguments" by concatenating fields with params.
+      set arguments list {$fields$; $params$};
+
+      # Produce the appropriately mangled versions of the names of gets...
+      set gName intercap [_] $gname$;
+      set GName initcap $gName$;
+      set Getdesc initcap $getdesc$;
+      set GType {when $multi$ [Multi]; else [Single]};
+      set GClass {when $multi$ [List<$Class$>]; else $Class$};
+      inside tables given {tblmodule; tbldbobject; tblexisting} {
+        set tblname {
+          when $tblexisting$ $tblexisting$;
+          else sep [_] {when $tblmodule$ trans [:] [_] $tblmodule$; $tbldbobject$};
+        };
+      };
+      inside {tables; orderby} given {tblmodule; tbldbobject} {
+        set TClass when $tbldbobject$ sep [.] {$nsbase$;
+                            when $tblmodule$ initcap intercap _ subst [:] [._] $tblmodule$;
+                            initcap intercap _ $tbldbobject$};
+      };
+    };
+
+    # ... and references.
+    inside references given {rname; refdesc; gname; rmodule; rdbobject; multi} {
+      set gName intercap [_] $gname$;
+      set GName initcap $gName$;
+      set RClass sep [.] {$nsbase$;
+                          when $rmodule$ initcap intercap _ subst [:] [._] $rmodule$;
+                          initcap intercap [_] $rdbobject$};
+      set GClass {when $multi$ [List<$RClass$>]; else $RClass$};
+      set rName intercap [_] $rname$;
+      set RName initcap $rName$;
+      set Refdesc initcap $refdesc$;
+    };
+
+    # Construct pkeys from fields that have pkey set.
+    set pkeys list {
+      forall $gets$ when $pkey$ forall $fields$ {use extract_all_field};
+    };
+    # Construct a list of non-pkeys too (because we iterate over these so often
+    # that it's probably worth it).
+    set nonpkeys list {
+      forall $fields$ when {not $pkey$} {use extract_all_field};
+    };
+
+    # Generate the sql statements for insert, delete, update, and each get
+    use sql_statements;
+
+    inside gets given {
+      arguments; where_sql;
+    } {
+      set sqlparams {
+        when $use_positional$ list {
+          forall $where_sql$ when {default fname} {
+            extract {fname; tblalias; fielddesc; type; nullable};
+            use field_processing;
+          };
+        }; else {
+          $arguments$;
+        };
+      };
+
+      # Grab the raw SQL minus any parameter names. This is used to identify whether other table names show up, so the cache can be cleared appropriately
+      # we can leave out the $fname$ bits because we're only looking to see if the table name shows up, fields and params don't matter
+      set stripped_sql sep [ ] forall $where_sql$ $sqlbefore$;
+      set stripped_sql lcase {[]; $stripped_sql$}; # Turn it into a string
+    };
+
+
+
+  } {
+
+[using NR.nrdo.Attributes;
+using NR.nrdo.Internal;
+using NR.nrdo.Caching;
+using NR.nrdo.Connection;
+using System;
+using System.Linq;
+using System.Collections.Generic;];
+
+when {defined csharp-using} {[
+
+// Table-specific usings];
+  forall $csharp-using$ [
+using $using$;];
+};
+[
+
+#pragma warning disable 612
+[[assembly:NrdoTables(typeof($fqClass$), Name="$fqdbobject$", OldNames=new string[[[]{];
+  sep [, ] forall $renamed$ "$from$";
+[})[]
+#pragma warning restore 612
+];
+
+when $namespace$ [
+namespace $namespace$ {];
+
+[
+using NR.nrdo;
+using NR.nrdo.Util;
+
+
+///
+///$description$
+///]; subst [
+] [
+///] $longdesc$; [
+///<p>$Class$ objects are stored in the $table$ database table.
+///Related indexes and other objects contain "_$hash$_" in their names.</p>
+///
+///@author [[Generated automatically by nrdo v$nrdover$[]
+///
+[[Serializable[]
+[[NrdoTable("$fqdbobject$", PkeySequenced=$sequenced$];
+when $existing_table$ [, ExistingName="$existing_table$"];
+[, CacheFileName="$cache_filename$",
+CacheFileContents=@"[[[] tcache $cache_filename$ ];
+when $existing_table$ [existing {
+]; else {
+[{];
+# First fields
+forall $fields$ {[
+  $fname$ $sqltype$ ]; when $nullable$ nullable; else notnull; when {allof $pkey$ $sequenced$} [ identity]; [;];
+  # Note that the cache file contains 'identity' even when the dbadapter doesn't use that feature, so we don't need to make it conditional
+}; [
+} {];
+# Then primary keys, unique keys and indexes
+forall $indexes$ {[
+  ]; when $pkey$ pk; else when $unique$ uk; else ix; [ $name$ { ]; forall $fields$ [$fname$; ]; [};];
+}; [
+} {];
+# Then foreign keys
+forall $references$ when $fkey$ {[
+  $fkeyname$ ]; sep . {$schema$; sep _ {when $rmodule$ trans : _ $rmodule$; $rdbobject$}}; [ { ];
+  forall $rjoins$ [$fname1$ $fname2$; ];
+  [}]; when $cascading$ [ cascade]; [;];
+}; [
+} {];
+# This spot in the file is used for databases like Oracle and Postgres which require triggers and sequences for identity fields.
+# FIXME: the information necessary to populate it is not currently made available to cgl.
+[
+;
+];
+};
+# Finally a list of all before statements that have run successfully.
+forall $before$ [$name$ ]; [;
+};")[]];
+box renindex {int 1} {
+  forall $renamed$ {[
+    [[NrdoRenamedFrom(]; whatsin renindex; [, "$from$")[]];
+    assign renindex plus {whatsin renindex} {int 1};
+  };
+};
+box bindex {int 1} {
+  forall $before$ {[
+    [[NrdoBeforeStatement(]; whatsin bindex; [, "$step$", "$name$", "];
+     subst [
+] [\r\n] subst " \" subst \ \\ $statement$;
+    [", Initial=$initial$, Upgrade=$upgrade$)[]];
+    assign bindex plus {whatsin bindex} {int 1};
+  };
+};
+box indexindex {int 1} {
+  forall $indexes$ {[
+    [[NrdoIndex(]; whatsin indexindex; [, "$name$", "];
+    sep [;] forall $fields$ [$fname$];
+    [", IsPrimary=$pkey$, IsUnique=$unique$)[]];
+    assign indexindex plus {whatsin indexindex} {int 1};
+  };
+};
+when {defined csharp-attrs} [[[$csharp-attrs$[]];
+[
+public sealed partial class $Class$ : ];
+when {defined useinterface} ITableObject<$Class$>; else default csharp-base-class [DBTableObject<$Class$>];
+when $sequenced$ forall $pkeys$ [, IIdentityObject<$Class$, $wtype$>];
+[ {
+];
+when {defined csharp-code} [$csharp-code$];
+[
+
+#region Delete, insert and update helpers
+  protected override void setPkeyOnCmd(NrdoCommand cmd) {];
+    when $sequenced$ [
+    if (!isNew) {];
+    forall $pkeys$ {[
+      this.Set$Type$Parameter(cmd, "$ffull$", "$sqltype$", @$fFull$);];
+    };
+    when $sequenced$ [
+
+    }]; [
+  }
+  protected override void setDataOnCmd(NrdoCommand cmd) {];
+    forall $nonpkeys$ {[
+      this.Set$Type$Parameter(cmd, "$ffull$", "$sqltype$", @$fFull$);];
+    }; [
+  }
+  protected override void getPkeyFromSeq(NrdoScope scope) {];
+  # There will only ever be one pkey field if it is sequenced, but using
+  # forall makes it possible to use $fname$ etc in the body. It also gives
+  # correct, if slightly strange and inefficient, behavior if this rule ever
+  # changes.
+  when $sequenced$ forall $pkeys$ [
+    @$fName$ = ($wtype$) scope.ExecuteSql(scope.DbDriver.GetSelectFromNothingSql(scope.DbDriver.GetNewSequencedKeyValueSql(null)), result => result.Get$Type$(0)).Single();];
+  [
+  }
+  ]; when $sequenced$ forall $pkeys$ {[
+  private $wtype$? desiredIdentity;
+  void IIdentityObject<$Class$, $wtype$>.SetDesiredIdentity($wtype$ @$fFull$) {
+    if (!IsNew) throw new ApplicationException("Cannot set identity on a $Class$ that is not new");
+    desiredIdentity = @$fFull$;
+  }
+  protected override void UpdateWithIdentityIfNecessary() {
+    if (desiredIdentity == null) {
+      UpdateThis();
+      return;
+    }
+    if (!IsNew) throw new ApplicationException("Cannot apply a fixed identity on a $Class$ that is not new");
+    try {
+      var start = DateTime.Now;
+      NrdoTransactedScope.MaybeBeginTransaction(DataBase);
+      using (var scope = new NrdoScope(DataBase)) {
+        scope.ExecuteSql(insertStatementWithIdentity,
+          cmd => {
+            setDataOnCmd(cmd);
+            this.Set$Type$Parameter(cmd, "$ffull$", "$sqltype$", desiredIdentity);
+          });
+        this.@$fName$ = ($wtype$) desiredIdentity;
+        isNew = false;
+        desiredIdentity = null;
+      }
+      //log(start, "DB Update: " + cmdText);
+    } finally {
+      DataModification.RaiseFullFlush();
+    }
+  }]};
+  when $sequenced$ {[
+  private string insertStatementWithIdentity {
+    get {
+      return "];
+      subst [
+] [\n" +
+"] subst ["] [\"] subst ['] [\'] subst [\] [\\]
+        forall $insert_sql_with_identity$ {$sqlbefore$; when {default fname} {$param_char$; when {not $use_positional$} $ffull$}};
+      [";
+    }
+  }]}; [
+  protected override string UpdateStatement {
+    get {
+      return ];
+      when $nonpkeys$ {
+        ["];
+        subst [
+] [\n" +
+"] subst ["] [\"] subst ['] [\'] subst [\] [\\]
+          forall $update_sql$ {$sqlbefore$; when {default fname} {$param_char$; when {not $use_positional$} $ffull$}};
+      ["];
+      }; else [null]; [;
+    }
+  }
+
+  // Primary keys are put last so that the field order is the same for insert vs
+  // update.
+  protected override string InsertStatement {
+    get {
+      return "];
+      subst [
+] [\n" +
+"] subst ["] [\"] subst ['] [\'] subst [\] [\\]
+        forall $insert_sql$ {$sqlbefore$; when {default fname} {$param_char$; when {not $use_positional$} $ffull$}};
+      [";
+    }
+  }
+  protected override string DeleteStatement {
+    get {
+      return "];
+      subst [
+] [\n" +
+"] subst ["] [\"] subst ['] [\'] subst [\] [\\]
+        forall $delete_sql$ {$sqlbefore$; when {default fname} {$param_char$; when {not $use_positional$} $ffull$}};
+      [";
+    }
+  }
+#endregion
+
+];
+
+  box gindex {int 1} {
+    forall $gets$ {[
+
+#region GetBy$GName$
+ 
+  [[NrdoGet(]; whatsin gindex; [, "$gname$", Pkey=$pkey$, Multi=$multi$, HasIndex=]; not $noindex$; [, HasCode=]; not $nocode$; when $rawwhere$ {[, Where="]; subst [
+] [\r\n] subst " \" subst \ \\ $rawwhere$; ["]}; [)[]];
+  box tindex {int 1} {
+    forall $tables$ {[
+      [[NrdoByTable(]; whatsin tindex; [, typeof(];
+      sep . {$nsbase$; when $tblmodule$ initcap intercap _ subst : ._ $tblmodule$; initcap intercap _ $tbldbobject$};
+      [), "$tblalias$")[]];
+      assign tindex plus {whatsin tindex} {int 1};
+    };
+  };
+  box jindex {int 1} {
+    forall $joins$ {[
+      [[NrdoJoin(]; whatsin jindex;
+      when {ne $tblalias1$ self} [, FromTable="$tblalias1$"];
+      [, ToTable="$tblalias2$", FromField="$fname1$", ToField="$fname2$")[]];
+      assign jindex plus {whatsin jindex} {int 1};
+    };
+  };
+  box findex {int 1} {
+    forall $fields$ {[
+      [[NrdoByField(]; whatsin findex; [, "$fname$"];
+      when {not eq $tblalias$ self} [, Table="$tblalias$"];
+      [)[]];
+      assign findex plus {whatsin findex} {int 1};
+    };
+  };
+  box pindex {int 1} {
+    forall $params$ {[
+      [[NrdoParam(]; whatsin pindex; [, "$fname$", typeof($type$), Nullable=$nullable$)[]];
+      assign pindex plus {whatsin pindex} {int 1};
+    };
+  };
+  box oindex {int 1} {
+    forall $orderby$ {[
+      [[NrdoOrderBy(]; whatsin oindex;
+      when $fname$ {
+        [, Field="$fname$"];
+        when {ne $tblalias$ self} [, Table="$tblalias$"];
+      };
+      else {
+        [, Sql=@"]; subst " "" $rawsql$; ["];
+      };
+      [, Descending=$descending$)[]];
+      assign oindex plus {whatsin oindex} {int 1};
+    };
+  };
+  when {defined csharp-attrs} [[[$csharp-attrs$[]]; [
+  ]; when $nocode$ private; else public; [ static $GClass$ ]; when $nocode$ nrdoPrivate_; [GetBy$GName$(];
+    sep [, ] forall $arguments$ [$Wtype$ @$fFull$]; [) {];
+    when $nocode$ [
+      throw new InvalidOperationException();];
+    else {
+      forall $fields$ when {not $nullable$} {[
+        if (@$fFull$ == null) return ]; when $multi$ [new List<$Class$>()]; else [null]; [;];
+      }; [
+      return get$GType$(new WhereBy$GName$(];
+      sep [, ] forall $arguments$ [@$fFull$];
+      [));];
+    }; [
+  }];
+  when {not $nocode$} {
+    [public static $GClass$ GetBy$GName$(];
+      sep [, ] {[DataBase dataBase]; forall $arguments$ [$Wtype$ @$fFull$]}; [) {];
+      forall $fields$ when {not $nullable$} {[
+        if (@$fFull$ == null) return ]; when $multi$ [new List<$Class$>()]; else [null]; [;];
+      }; [
+      return get$GType$(dataBase, new WhereBy$GName$(];
+      sep [, ] forall $arguments$ [@$fFull$];
+      [));
+    }
+
+  private sealed class CacheBy$GName$ : Table]; when $multi$ Multi; else Single; [ObjectCache<$Class$, WhereBy$GName$, CacheBy$GName$> {
+    public CacheBy$GName$()
+      : base(];
+        when $multi$ {
+          default cacheminqueries 0;
+          [, ];
+        };
+        [$cachesize$) {];
+        forall $references$ when $cascading$ [
+	  DataModification.CascadeFrom<$RClass$>.Cascade += ReactTo$RName$Cascade;];
+        forall $tables$ {[
+          ]; sep [.] {$nsbase$;
+                      when $tblmodule$ initcap intercap _ subst [:] [._] $tblmodule$;
+                      initcap intercap [_] $tbldbobject$};
+          [.DataModification.Any += Clear;];
+        };
+        forall $alltables$ when {ne $stripped_sql$ {subst {lcase subst : _ sep : {$module$; $dbobject$}} [] $stripped_sql$}} {[
+          ]; sep [.] {$nsbase$;
+                      when $module$ initcap intercap _ subst [:] [._] $module$;
+                      initcap intercap [_] $dbobject$};
+          [.DataModification.Any += Clear;];
+        };
+		forall $dependtables$ when {ne $stripped_sql$ {subst {lcase subst : _ sep : {$depmodule$; $depdbobject$}} [] $stripped_sql$}} {[
+          ]; sep [.] {$nsbase$;
+                      when $depmodule$ initcap intercap _ subst [:] [._] $depmodule$;
+                      initcap intercap [_] $depdbobject$};
+          [.DataModification.Any += Clear;];
+        }; [
+    }
+
+    protected override string GetMethodName() {
+      return "$fqClass$.GetBy$GName$";
+    }];
+
+    when {anyof {le {int default cachesize 0} {int 0}}
+          {eq {default disablecache false} true}} {[
+      protected override bool IsDisabled {
+        get { return true; }
+      }
+    ]}; [
+
+     public override long ModificationCountHash {
+      get {
+        return DataModification.Count];
+          forall $tables$ {[ +
+            ]; sep [.] {$nsbase$;
+                        when $tblmodule$ initcap intercap _ subst [:] [._] $tblmodule$;
+                        initcap intercap [_] $tbldbobject$};
+            [.DataModification.Count];
+          };
+          forall $alltables$ when {ne $stripped_sql$ {subst {lcase subst : _ sep : {$module$; $dbobject$}} [] $stripped_sql$}} {[ +
+            ]; sep [.] {$nsbase$;
+                        when $module$ initcap intercap _ subst [:] [._] $module$;
+                        initcap intercap [_] $dbobject$};
+            [.DataModification.Count];
+          };
+		  forall $dependtables$ when {ne $stripped_sql$ {subst {lcase subst : _ sep : {$depmodule$; $depdbobject$}} [] $stripped_sql$}} {[ +
+            ]; sep [.] {$nsbase$;
+                        when $depmodule$ initcap intercap _ subst [:] [._] $depmodule$;
+                        initcap intercap [_] $depdbobject$};
+            [.DataModification.Count];
+          };
+        [;
+      }
+    }];
+
+    # Implementations of ReactTo methods etc.
+    # Skip ALL of this if there is "where" SQL. Nothing smart can be done in that case. Also if there is an orderby
+    # clause with literal SQL in it, although I'm not sure that ever happens in cmScribe.
+    # Note: we ARE allowed to assume that the table is not in its own joins as far as smart behavior is concerned here,
+    # because the lines above would set its own .DataModification.Any += Clear in that case so whatever we do here becomes moot.
+    # Also skip all of this if there are other tables, joins, or params. It may be possible to do some smart things in that case,
+    # but that's for a later iteration of the code. Gets composed only of fields on the current table are clearly the vast
+    # majority of gets and accommodating those gets us the bulk of what we need.
+
+    # protected override WhereBy$GName$ GetWhereByObject($Class$ t) {
+    #   return new WhereBy$GName$(]; sep [, ] forall $fields$ [t.@$fName$]; [);
+    # }
+    # protected override void ReactToInsert($Class$ t) {
+    #   # if there's "noindex" or "orderby":
+    #     ClearByGettingWhere(t);
+    #   # otherwise
+    #     InsertByGettingWhere(t);
+    # }
+    # protected override ReactToDelete($Class$ t) {
+    #   # If all the fields are readonly
+    #     # if there's "noindex" or "orderby"
+    #       ClearByGettingWhere(t);
+    #     # otherwise
+    #       DeleteByGettingWhere(t);
+    #  # otherwise
+    #    # if there's "noindex" or "orderby" (( *** WARNING this is the bit that is fuzzy *** ))
+    #      ClearByIteration(t);
+    #    # otherwise
+    #      DeleteByIteration(t);
+    # }
+    # protected override ReactToUpdate($Class$ t) {
+    #   # If any fields are writable:
+    #     ClearByIteration(t);
+    #   # then regardless,
+    #   # if there's "noindex" or "orderby"
+    #     ClearByGettingWhere(t);
+    #   # otherwise
+    #     InsertByGettingWhere(t);
+    # }
+
+    when {not anyof $rawwhere$ $tables$ $params$ $joins$} {[
+      protected override WhereBy$GName$ GetWhereByObject($Class$ t) {
+        return new WhereBy$GName$(]; sep [, ] forall $fields$ [t.@$fName$]; [); // Note: this uses the lowercase private name which means it can access identity fields even when isNew, ie after a delete
+      }
+      public override void ReactToInsert($Class$ t) {];
+        when {anyof $multi$ $noindex$} [
+          ClearByGettingWhere(t);];
+        else [
+          InsertByGettingWhere(t);]; [
+      }
+      public override void ReactToDelete($Class$ t) {];
+        when {forall $fields$ when $writable$ x} {
+          when {allof {not $multi$} $noindex$} [
+            ClearByIteration(t);];
+	        else [
+            DeleteByIteration(t);];
+        }; else {
+          when {allof {not $multi$} $noindex$} [
+            ClearByGettingWhere(t);];
+	        else [
+            DeleteByGettingWhere(t);];
+        }; [
+      }
+      public override void ReactToUpdate($Class$ t) {];
+        when {forall $fields$ when $writable$ x} [
+          ClearByIteration(t);]; [
+        ReactToInsert(t);
+      }];
+
+      # This pattern of code exposes some CGL bugs which we work around by repeatedly redeclaring things, like cascrefs1/2 and the rjoins list...
+      # The goal is - for each reference, identify whether for every field in the current get, there's a corresponding join field on the other table
+      # and if so, use the CascadeByWhere method and pass in a Where constructed from the fields on the other table that's being deleted
+      # I think this is assuming that the cascaded fields must be readonly, or at least not have been changed on the object being deleted,
+      # which is theoretically not guaranteed, but in practice always true.
+      # Forcing the targets of cascades to be readonly would be a good idea, in fact.
+      define {
+        declare extractrjoin given {fname1; fname2} {extract fname1; extract fname2};
+        set cascrefs1 list {
+          forall $references$ when $cascading$ {
+            set RName $RName$;
+            set rjoins list { forall $rjoins$ {use extractrjoin} };
+            set RClass $RClass$;
+          };
+        };
+        set cascrefs2 list {
+          forall $cascrefs1$ {
+            set RName $RName$;
+            set RClass $RClass$;
+            set GName $GName$;
+            set body {
+              when {forall $fields$ when {not forall {list {forall $rjoins$ {use extractrjoin}}} when {eq $fname1$ $fname$} x} x} [
+                Clear();];
+              else {[
+                CascadeByWhere(new WhereBy$GName$(]; sep , forall $fields$ {forall {list {forall $rjoins$ {use extractrjoin}}} when {eq $fname1$ $fname$} {[other.]; initcap intercap _ $fname2$}}; [));];
+              };
+            };
+          };
+        };
+      } {
+        forall $cascrefs2$ {[
+          private void ReactTo$RName$Cascade($RClass$ other) {$body$
+          }];
+        };
+      };
+
+    }; else {
+      forall $references$ when $cascading$ [
+        private void ReactTo$RName$Cascade($RClass$ other) {
+          Clear();
+        }];
+    }; [
+  }
+  private sealed class WhereBy$GName$ : CachingWhere<$Class$, WhereBy$GName$, CacheBy$GName$> {];
+    forall $arguments$ {[
+
+    private $Wtype$ @$fFull$;];
+    };
+    [
+
+    internal WhereBy$GName$(];
+      sep [, ] forall $arguments$ [$Wtype$ @$fFull$];
+      [) {];
+      forall $arguments$ [
+      this.@$fFull$ = @$fFull$;];
+      [
+    }
+
+    public override bool Equals(object o) {
+      if (o == (object) this) return true;
+      WhereBy$GName$ other = o as WhereBy$GName$;
+      return other != null];
+      forall $fields$ [ &&
+        N$type$.DBEquivalentComparer.Equals(@$fFull$, other.@$fFull$)];
+      forall $params$ [ &&
+        object.Equals(@$fFull$, other.@$fFull$)];
+      [;
+    }
+
+    public override int GetHashCode() {
+      return 0];
+      forall $fields$ [ ^
+        ((object) @$fFull$ == null ? 0 : N$type$.DBEquivalentComparer.GetHashCode(@$fFull$))];
+      forall $params$ [ ^
+        ((object) @$fFull$ == null ? 0 : @$fFull$.GetHashCode())];
+      [;
+    }
+
+    public override string GetParameters { get { return "[["]; sep [ + "[], [[" ] forall $arguments$ [ + @$fFull$]; [ + "[]"; } }
+    public override string ToString() {
+      return GetMethodName + "(" + GetParameters + ")";
+    }
+    public override string GetMethodName {
+      get {return "$fqClass$.GetBy$GName$";}
+    }
+
+// The calling of a method on default($Class$) normally causes a warning because the value is null. We're using extension methods, so it is in fact okay.
+#pragma warning disable 1720
+    public override void SetOnCmd(NrdoCommand cmd) {];
+      forall $sqlparams$ {[
+        default($Class$).Set$Type$Parameter(cmd, "$ffull$", "]; $sqltype$; [", @$fFull$);];
+      }; [
+    }
+#pragma warning restore 1720
+
+    public override string SQLStatement {
+      get {
+        return selectStatement + "];
+
+      # Join the where strings together with "$param_char$field_name" in between, and
+      # escape C# reserved characters (inc newline).
+      subst [
+] [\n" +
+"] subst ["] [\"] subst ['] [\'] subst [\] [\\]
+          {[];forall $where_sql$ {$sqlbefore$;when {default fname} {$param_char$; when {not $use_positional$} $ffull$}}};
+      [";
+      }
+    }
+  }
+];
+};
+      [
+
+#endregion
+];
+    assign gindex plus {whatsin gindex} {int 1};
+  };
+};
+
+  [
+
+#region References to other tables];
+
+  box rindex {int 1} {
+    forall $references$ {
+   when {not $static$} {[
+     [[NrdoRef(]; whatsin rindex; [, "$rname$", typeof($RClass$), Multi=$multi$, HasCode=]; not $nocode$; when $rawwhere$ {[, Where="]; subst [
+] [\r\n] subst " \" subst \ \\ $rawwhere$; ["]}; [, Fkey=$fkey$, FkeyName=]; when $fkeyname$ "$fkeyname$"; else null; [, Cascade=$cascading$, Get="GetBy$GName$",
+       GetParams=new System.Type[[[] {];
+         sep [, ] forall $mappedfields$ [typeof($Wtype$)];
+       [})[]];
+    box rtindex {int 1} {
+      forall $rrtables$ {[
+        [[NrdoByTable(]; whatsin rtindex; [, typeof(];
+        sep . {$nsbase$; when $tblmodule$ initcap intercap _ subst : ._ $tblmodule$; initcap intercap _ $tbldbobject$};
+        [), "$tblalias$")[]];
+        assign rtindex plus {whatsin rtindex} {int 1};
+      };
+    };
+    box rjindex {int 1} {
+      forall $rjoins$ {[
+        [[NrdoJoin(]; whatsin rjindex;
+        when {ne $tblalias1$ this} [, FromTable="$tblalias1$"];
+        when {ne $tblalias2$ self} [, ToTable="$tblalias2$"];
+        [, FromField="$fname1$", ToField="$fname2$")[]];
+        assign rjindex plus {whatsin rjindex} {int 1};
+      };
+    };
+    box rfindex {int 1} {
+      forall $rfields$ {[
+        [[NrdoByField(]; whatsin rfindex; [, "$fname$"];
+        when {not eq $tblalias$ self} [, Table="$tblalias$"];
+        [)[]];
+        assign rfindex plus {whatsin rfindex} {int 1};
+      };
+    };
+    box rpindex {int 1} {
+      forall $params$ {[
+        [[NrdoParam(]; whatsin rpindex; [, "$fname$", typeof($type$), Nullable=$nullable$)[]];
+        assign rpindex plus {whatsin rpindex} {int 1};
+      };
+    };
+    box roindex {int 1} {
+      forall $rorderby$ {[
+        [[NrdoOrderBy(]; whatsin roindex;
+        when $fname$ {
+          [, Field="$fname$"];
+          when {ne $tblalias$ self} [, Table="$tblalias$"];
+        };
+        else {
+          [, Sql=@"]; subst " "" $rawsql$; ["];
+        };
+        [, Descending=$descending$)[]];
+        assign roindex plus {whatsin roindex} {int 1};
+      };
+    };
+  };
+  when {defined csharp-attrs} [[[$csharp-attrs$[]]; [
+  ]; when $nocode$ private; else public; [ ];
+    when $static$ [static ];
+    when {eq $RName$ Type} [new ];
+    [$GClass$ ]; when $nocode$ nrdoPrivate_; [Get$RName$(];
+    sep [, ] {
+      forall $rtables$ {
+        sep [.] {$nsbase$;
+                 when $tblmodule$ initcap intercap _ subst [:] [._] $tblmodule$;
+                 initcap intercap [_] $tblbobject$};
+        [ ]; intercap [_] $tblalias$;
+      };
+      forall $arguments$ [$Wtype$ @$fFull$];
+    };
+    [) {];
+    when $nocode$ [
+      throw new InvalidOperationException();];
+    else {[
+    try {
+    return ];
+
+    # Cache the result of the get in the variable $rName$ for references
+    # with no arguments; this allows the property to be used repeatedly
+    # without multiple database gets.
+    when {not anyof $arguments$ $static$} [@$rName$ = ];
+
+
+    [$RClass$.GetBy$GName$(];
+    sep [, ] {
+      forall $mappedfields$ {
+        when $isproperty$ [$fTable$.$FName$]; else [@$fFull$];
+      };
+    };
+    [);
+    } catch (NullReferenceException) {
+      return ]; when $multi$ [new List<$RClass$>()]; else [null]; [;
+    }];
+    }; [
+  }];
+    when {not {anyof $static$ $nocode$}} {
+      when {not $arguments$} {[
+        [[NonSerialized[]
+        private $GClass$ @$rName$ = null;];
+        when {defined csharp-attrs} [[[$csharp-attrs$[]]; [
+        public $GClass$ $RName$ {get { copyInitialValuesOnDeserialize(); return @$rName$ ?? Get$RName$(); }}];
+
+        when {not $multi$} {
+          when {defined csharp-attrs} [[[$csharp-attrs$[]]; [
+          public static NRDOComparer<$Class$> $RName$Order(NRDOComparer<$GClass$> nrdoComparer) {
+            return NRDOComparer<$Class$>.Create<$GClass$>(@$class$ => @$class$.$RName$, nrdoComparer);
+          }];
+        };
+      }; else when {not $multi$} {
+        when {defined csharp-attrs} [[[$csharp-attrs$[]]; [
+        public static NRDOComparer<$Class$> $RName$Order(];
+          sep [, ] {
+            forall $rtables$ {
+              sep [.] {$nsbase$;
+                       when $tblmodule$ initcap intercap _ subst [:] [._] $tblmodule$;
+                       initcap intercap _ $tblbobject$};
+              [ ]; intercap _ $tblalias$;
+            };
+            forall $arguments$ [$Wtype$ @$fFull$];
+            [NRDOComparer<$GClass$> nrdoComparer];
+          }; [) {
+          Dictionary<$Class$, $GClass$> cache = new Dictionary<$Class$, $GClass$>();
+          return NRDOComparer<$Class$>.Create<$GClass$>(@$class$ => {
+            if (!cache.ContainsKey(@$class$)) {
+              cache[[@$class$[] = @$class$.Get$RName$(];
+                sep [, ] {
+                  forall $rtables$ {intercap _ $tblalias$};
+                  forall $arguments$ @$fFull$;
+                }; [);
+            }
+            return cache[[@$class$[];
+          }, nrdoComparer);
+        }];
+      };
+    };
+    assign rindex plus {whatsin rindex} {int 1};
+  };
+  };
+
+  [
+#endregion
+
+
+#region Constructors];
+
+  [
+
+  private $Class$(];
+  sep [, ] forall $fields$ [$wtype$ @$fName$]; [, bool isNew) {
+    this.isNew = isNew;
+    ];
+  forall $fields$ [
+    this.@$fName$ = @$fName$;];
+    [
+  }
+
+  protected override $Class$ FieldwiseClone() {
+    return new $Class$(];
+    sep [, ] forall $fields$ [this.@$fName$];
+    [, this.isNew);
+  }
+
+  [[NrdoCtor(];
+  sep [, ] forall $fields$ when {not $writable$} when {not allof $pkey$ $sequenced$} "$fname$";
+  [)[]
+  public $Class$(];
+  sep [, ] forall $fields$ when {not $writable$} when {not allof $pkey$ $sequenced$}
+    [$wtype$ @$fName$];
+  [) {
+    isNew = true;
+    ];
+  forall $fields$ when {not $writable$} when {not allof $pkey$ $sequenced$} [
+    this.@$fName$ = @$fName$;]; [
+  }
+
+  public $Class$($Class$ @$class$];
+  forall $fields$ when {not $writable$} when {not allof $pkey$ $sequenced$}
+    [, $wtype$ @$fName$];
+  [) {
+    isNew = true;
+    ];
+    forall $fields$ when {not allof $pkey$ $sequenced$} {[
+      this.@$fName$ = ]; when $writable$ [@$class$.]; [@$fName$;];
+    }; [
+  }
+];
+
+# Identify all readonly fields that correspond to fields of tables
+# referenced through a foreign key.
+# If there are any like this, create an alternate version of the constructor
+# which takes the appropriate table type as an argument and stores it in the
+# existing variable created for the reference.
+# The right value will be substituted in at 'Update' time.
+
+  define {
+    inside fields given {writable; pkey; sequenced; fname} {
+      set readonly-ref-name {
+        when {not $writable$} when {not allof $pkey$ $sequenced$} {
+          forall $references$ when {allof $fkey$ {not $nocode$}} {
+            when {eq $fname$ {sep : forall $mappedfields$ $fname$}} {
+              $rname$;
+            };
+          };
+        };
+      };
+      set readonly-ref-class {
+        forall $references$ when {eq $rname$ $readonly-ref-name$} $RClass$;
+      };
+      set readonly-rName {
+        forall $references$ when {eq $rname$ $readonly-ref-name$} $rName$;
+      };
+      set readonly-FName {
+        forall $references$ when {eq $rname$ $readonly-ref-name$} forall $mappedfields$ initcap intercap _ $origname$;
+      };
+    };
+  } {
+    when {forall $fields$ when $readonly-ref-name$ existing} {
+      forall $fields$ when $readonly-ref-name$ [
+        private $readonly-ref-class$ initial_$readonly-rName$;
+      ];
+    [
+  public $Class$(];
+  sep [, ] forall $fields$ when {not $writable$} when {not allof $pkey$ $sequenced$} {
+    when $readonly-ref-name$ [$readonly-ref-class$ @$readonly-rName$];
+    else [$wtype$ @$fName$];
+  }; [) {
+    isNew = true;
+    ];
+  forall $fields$ when {not $writable$} when {not allof $pkey$ $sequenced$} {
+    when $readonly-ref-name$ [
+    this.@$readonly-rName$ = @$readonly-rName$;
+    if (@$readonly-rName$ != null && !@$readonly-rName$.IsNew) {
+      this.@$fName$ = @$readonly-rName$.$readonly-FName$;
+    } else {
+      initial_$readonly-rName$ = @$readonly-rName$;
+    }
+    ]; else [
+    this.@$fName$ = @$fName$;]; 
+  }; [
+  }
+
+  public $Class$($Class$ @$class$];
+  forall $fields$ when {not $writable$} when {not allof $pkey$ $sequenced$} {
+    when $readonly-ref-name$ [, $readonly-ref-class$ @$readonly-rName$];
+    else [, $wtype$ @$fName$];
+  }; [) {
+    isNew = true;
+    ];
+    forall $fields$ when {not allof $pkey$ $sequenced$} {
+      when $readonly-ref-name$ [
+      initial_$readonly-rName$ = @$readonly-rName$;
+      this.@$readonly-rName$ = @$readonly-rName$;
+      if (@$readonly-rName$ != null && !@$readonly-rName$.IsNew) this.@$fName$ = @$readonly-rName$.$readonly-FName$;
+      ]; else {[
+      this.@$fName$ = ]; when $writable$ [@$class$.]; [@$fName$;];
+      };
+    }; [
+  }
+
+  protected override void copyInitialValuesOnDeserialize() {];
+    forall $fields$ when {not $writable$} when {not allof $pkey$ $sequenced$} when $readonly-ref-name$ [
+      if (initial_$readonly-rName$ != null && @$readonly-rName$ == null) @$readonly-rName$ = initial_$readonly-rName$;]; [
+  }
+
+#endregion
+
+
+#region Update implementation
+
+]; # 'forall fields when writable x' evaluates to a truey value - a string of xxxx's - when there is at least one writable field...
+  when {not {forall $fields$ when $writable$ x}} [
+  protected override bool IsUnchanged { get { return true; } }
+  ]; [
+
+  public override void PreUpdateRefs() {
+    if (IsNew) {];
+      forall $fields$ when $readonly-ref-name$ [
+        if (initial_$readonly-rName$ != null && (@$readonly-rName$ == null || @$readonly-rName$ == initial_$readonly-rName$)) {
+          if (initial_$readonly-rName$.IsNew) initial_$readonly-rName$.Update();
+          this.@$fName$ = initial_$readonly-rName$.$readonly-FName$;
+          initial_$readonly-rName$ = null;
+        }
+      ]; [
+    }
+  }
+
+#endregion
+];
+    };
+    else [
+#endregion
+];
+  };
+
+  [
+
+#region Table field properties];
+
+  box findex {int 0} {
+    forall $fields$ {[
+
+      ///$Fielddesc$.
+      private $wtype$ @$fName$;
+
+      ///$Fielddesc$.
+      [[NrdoField(]; whatsin findex;
+      [, "$fname$", Nullable=$nullable$, DbType="$sqltype$"]; when {allof $dblength$ {eq $type$ string}} [, Length=$dblength$]; [)[]];
+      when {defined csharp-attrs} [[[$csharp-attrs$[]]; [
+      public $wtype$ $FName$ {
+        get {];
+          when $sequenced$ when $pkey$ [
+          if (isNew) throw new NullReferenceException("Identity field not set yet");
+          ]; [
+          return @$fName$;
+        }];
+        when $writable$ {
+          when {allof {eq $type$ string} {ne $dblength$ {}}} [
+            set {Set$FName$(value, false);}
+          ]; else [
+            set {this.@$fName$ = value;}
+          ];
+        }; [
+      }];
+
+      when {allof $writable$ $dblength$ {eq $type$ string}} {
+        when {defined csharp-attrs} [[[$csharp-attrs$[]];
+        [
+        public void Set$FName$($wtype$ @$fName$, bool truncate) {
+          if (@$fName$ != null && @$fName$.Length > $dblength$) {
+            if (truncate) {
+              @$fName$ = @$fName$.Substring(0, $dblength$);
+            } else {
+              throw new ApplicationException("Value for $FName$ is " + @$fName$.Length + " characters but only $dblength$ are permitted (" + @$fName$ + ")");
+            }
+          }
+          this.@$fName$ = @$fName$;
+        }
+      ]};
+
+      when {defined csharp-attrs} [[[$csharp-attrs$[]]; [
+      public bool Has$FName$ {
+        get {];
+        when {allof $primitive$ {not $nullable$}} [
+          return true;];
+        else [
+          return @$fName$ != null;]; [
+        }
+      }];
+
+      when {defined csharp-attrs} [[[$csharp-attrs$[]]; [
+      public static NRDOComparer<$Class$> $FName$Order {
+        get {
+          return NRDOComparer<$Class$>.Create<$type$>(@$class$ => @$class$.$FName$);
+        }
+      }
+      ];
+      
+      # maybe later...
+      # public static NRDOComparer<$Class$> $FName$Order(NRDOComparer<$wtype$> comparison) {
+      #   return NRDOComparer<$Class$>.Create(@$class$ => @$class$.$FName$, comparison);
+      # }
+      assign findex plus {whatsin findex} {int 1};
+    };
+  };
+
+  [
+#endregion
+
+
+#region Get method helpers
+
+  // This is something of a hack, to force static-constructor like behavior without actually having a static
+  // constructor. We don't want a static constructor because users might want to add one in another part of
+  // the partial class.
+  private static bool nrdoInitialized = nrdoInitialize();
+  private static bool nrdoInitialize() {
+    if (nrdoInitialized) return true; // This will never happen, but avoids unused warnings on that variable];
+    forall $references$ when $cascading$ [
+      $RClass$.DataModification.Delete += DataModification.CascadeFrom<$RClass$>.RaiseCascadeDelete;
+      $RClass$.DataModification.CascadeDelete += DataModification.RaiseFullFlush;]; [
+    return nrdoInitialize(() => NR.nrdo.DataBase.Get(]; when {default dbidentifier} ["$dbidentifier$"]; else [null]; [), createFromDR, "]; subst [
+] [\n" +
+"] subst ["] [\"] subst ['] [\'] subst [\] [\\] $select_sql$; [");
+  }
+
+// The calling of a method on default($Class$) normally causes a warning because the value is null. We're using extension methods, so it is in fact okay.
+#pragma warning disable 1720
+  private static $Class$ createFromDR(NrdoResult result) {
+    return new $Class$(];
+    box counter {int 0} {
+      sep , {
+        forall $fields$ {[
+          ($wtype$) default($Class$).Read$Type$Value("$fname$", result, ]; whatsin counter; [)];
+          assign counter plus {whatsin counter} {int 1};
+        };
+        [ false];
+      };
+    }; [);
+  }
+#pragma warning restore 1720
+
+#endregion
+
+
+#region Equality testing
+
+  /**
+   * Return true if this $Class$ is equal to another object, by value.
+   * This is true if o is a $Class$, both have been instantiated in the
+   * database, and all the primary key fields are equal.
+   */
+  public override bool PkeyEquals($Class$ @$class$) {
+    return !isNew && @$class$ != null && !@$class$.isNew];
+    forall $pkeys$ [ &&
+           @$class$.@$fName$ == @$fName$]; [;
+  }
+
+  /**
+   * Obtain a hash code for this $Class$. The hash code is calculated by XORing
+   * the hash codes of each primary key field. This guarantees the C#
+   * requirement that if a.Equals(b), a.GetHashCode() == b.GetHashCode().
+   */
+  public override int GetPkeyHashCode() {
+    return ]; sep [ ^ ] forall $pkeys$ [@$fName$.GetHashCode()]; [;
+  }
+#endregion];
+
+  [
+
+}
+];
+
+when $namespace$ [
+}
+];
+  };
+};

@@ -1,0 +1,12 @@
+template {
+  define {
+   set basedir {when $basemodule$ {initcap intercap : subst : /: $basemodule$; /}; else []};
+  } outfile [$basedir$NrdoGlobal.cs] {[
+      using NR.nrdo.Attributes;
+      [[assembly: NrdoNsBase("$nsbase$")[]];
+    when {defined assemblylookup} [
+      [[assembly: NrdoAssemblyLookup(typeof($assemblylookup$))[]];
+    when {defined global-extra} [
+      $global-extra$];
+  };
+};

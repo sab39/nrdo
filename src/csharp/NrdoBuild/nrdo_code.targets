@@ -1,0 +1,31 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <UsingTask TaskName="NR.nrdo.Build.GenerateCode" AssemblyFile="R:\nrdo\csharp\NrdoBuild\bin\Release\NrdoBuild.dll"/>
+  <UsingTask TaskName="NR.nrdo.Build.CollectGeneratedFiles" AssemblyFile="R:\nrdo\csharp\NrdoBuild\bin\Release\NrdoBuild.dll"/>
+
+  <PropertyGroup>
+    <!-- In the future, if we can make this fast, we can put that step into CompileDependsOn too instead of BuildDependsOn and get it almost realtime -->
+    <BuildDependsOn>NrdoGenerateCode;$(BuildDependsOn)</BuildDependsOn>
+    <CompileDependsOn>NrdoCollectGeneratedFiles;$(CompileDependsOn)</CompileDependsOn>
+  </PropertyGroup>
+
+  <Target Name="NrdoIdentifyFiles">
+    <ItemGroup>
+      <NrdoFile Include="@(None)" Condition="'%(None.Extension)' == '.nrdo'"/>
+    </ItemGroup>
+    <ItemGroup>
+      <DfnFiles Include="@(None)" Condition="'%(None.Extension)' == '.dfn'"/>
+    </ItemGroup>
+    <ItemGroup>
+      <QuFiles Include="@(None)" Condition="'%(None.Extension)' == '.qu'"/>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="NrdoGenerateCode" DependsOnTargets="NrdoIdentifyFiles">
+    <GenerateCode NrdoFile="@(NrdoFile)" DfnFiles="@(DfnFiles)" QuFiles="@(QuFiles)" DoGenerateCode="true" DoCreateTables="true" />
+  </Target>
+  <Target Name="NrdoCollectGeneratedFiles" DependsOnTargets="NrdoIdentifyFiles">
+    <CollectGeneratedFiles NrdoFile="@(NrdoFile)" DfnFiles="@(DfnFiles)" QuFiles="@(QuFiles)">
+      <Output TaskParameter="CsharpFiles" ItemName="Compile"/>
+    </CollectGeneratedFiles>
+  </Target>
+</Project>

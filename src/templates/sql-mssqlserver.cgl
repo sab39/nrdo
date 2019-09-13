@@ -1,0 +1,14 @@
+export {
+  declare sequenced_pkey {
+    set pkey_get [select @@identity];
+  };
+  set < [[[];
+  set > [[]];
+  import sql-common.cgl;
+  declare csharp_support {
+    set provider SqlProvider;
+    set param_char @;
+    set use_positional {};
+    set IdentityType Decimal;
+  };
+};

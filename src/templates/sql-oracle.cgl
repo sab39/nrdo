@@ -1,0 +1,14 @@
+export {
+  declare sequenced_pkey given {hash; fname} {
+    set pkey_get [select sq_$hash$_$fname$.currval from dual];
+  };
+  set < [];
+  set > [];
+  import sql-common.cgl;
+  declare csharp_support {
+    set provider OracleProvider;
+    set param_char [:];
+    set use_positional not {};
+    set IdentityType Int32;
+  };
+};

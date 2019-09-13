@@ -1,0 +1,265 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <ProjectType>Local</ProjectType>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{DCB1BDE0-DB21-4583-86DD-5FCF0DA6C68D}</ProjectGuid>
+    <SccProjectName>
+    </SccProjectName>
+    <SccLocalPath>
+    </SccLocalPath>
+    <SccProvider>
+    </SccProvider>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ApplicationIcon>
+    </ApplicationIcon>
+    <AssemblyKeyContainerName>
+    </AssemblyKeyContainerName>
+    <AssemblyName>NR.nrdo</AssemblyName>
+    <AssemblyOriginatorKeyFile>
+    </AssemblyOriginatorKeyFile>
+    <DefaultClientScript>JScript</DefaultClientScript>
+    <DefaultHTMLPageLayout>Grid</DefaultHTMLPageLayout>
+    <DefaultTargetSchema>IE50</DefaultTargetSchema>
+    <DelaySign>false</DelaySign>
+    <OutputType>Library</OutputType>
+    <RootNamespace>NR.nrdo</RootNamespace>
+    <StartupObject>
+    </StartupObject>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <SccAuxPath>
+    </SccAuxPath>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkProfile />
+    <PublishUrl>http://localhost/Generic nrdo library/</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Web</InstallFrom>
+    <UpdateEnabled>true</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>true</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <OutputPath>R:\nrdo2016\lib\Net40\</OutputPath>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <BaseAddress>285212672</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <ConfigurationOverrideFile>
+    </ConfigurationOverrideFile>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
+    <DocumentationFile>
+    </DocumentationFile>
+    <DebugSymbols>true</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <Optimize>false</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <RunFxCop>false</RunFxCop>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <OutputPath>bin\Release\</OutputPath>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <BaseAddress>285212672</BaseAddress>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+    <ConfigurationOverrideFile>
+    </ConfigurationOverrideFile>
+    <DefineConstants>TRACE</DefineConstants>
+    <DocumentationFile>
+    </DocumentationFile>
+    <DebugSymbols>false</DebugSymbols>
+    <FileAlignment>4096</FileAlignment>
+    <Optimize>true</Optimize>
+    <RegisterForComInterop>false</RegisterForComInterop>
+    <RemoveIntegerChecks>false</RemoveIntegerChecks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.SqlServer.Management.SqlParser, Version=10.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>R:\Resources\SMO\SMO_201202\Microsoft.SqlServer.Management.SqlParser.dll</HintPath>
+    </Reference>
+    <Reference Include="ReadOnlyCollectionsInterfaces">
+      <HintPath>packages\ReadOnlyCollectionInterfaces.1.0.0\lib\NET40-client\ReadOnlyCollectionsInterfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="System">
+      <Name>System</Name>
+    </Reference>
+    <Reference Include="System.Collections.Immutable.Net40">
+      <HintPath>packages\System.Collections.Immutable.Net40.1.0.30.17\lib\net40\System.Collections.Immutable.Net40.dll</HintPath>
+    </Reference>
+    <Reference Include="System.configuration" />
+    <Reference Include="System.Data">
+      <Name>System.Data</Name>
+    </Reference>
+    <Reference Include="System.Web" />
+    <Reference Include="System.Xml">
+      <Name>System.XML</Name>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Attributes\Attributes.cs" />
+    <Compile Include="Caching\AllWhere.cs" />
+    <Compile Include="Caching\CachingWhere.cs" />
+    <Compile Include="Caching\CachingWhereBase.cs" />
+    <Compile Include="Caching\DBMultiObjectCache.cs" />
+    <Compile Include="Caching\DBObjectCacheBase.cs" />
+    <Compile Include="Caching\DBSingleObjectCache.cs" />
+    <Compile Include="Caching\IDBMultiObjectCache.cs" />
+    <Compile Include="Caching\IDBObjectCache.cs" />
+    <Compile Include="Caching\IDBSingleObjectCache.cs" />
+    <Compile Include="Caching\ITableMultiObjectCache.cs" />
+    <Compile Include="Caching\ITableObjectCache.cs" />
+    <Compile Include="Caching\ITableSingleObjectCache.cs" />
+    <Compile Include="Caching\TableMultiObjectCache.cs" />
+    <Compile Include="Caching\TableSingleObjectCache.cs" />
+    <Compile Include="Connection\NrdoCommand.cs" />
+    <Compile Include="Connection\NrdoConnection.cs" />
+    <Compile Include="Connection\NrdoResult.cs" />
+    <Compile Include="Connection\NrdoTransaction.cs" />
+    <Compile Include="DBTableObject.cs" />
+    <Compile Include="Connection\AccessDriver.cs" />
+    <Compile Include="Connection\DbDriver.cs" />
+    <Compile Include="Connection\OracleDriver.cs" />
+    <Compile Include="Connection\PostgresDriver.cs" />
+    <Compile Include="Connection\SqlServerDriver.cs" />
+    <Compile Include="IDBObject.cs" />
+    <Compile Include="IIdentityObject.cs" />
+    <Compile Include="Internal\DbDataTypes.cs" />
+    <Compile Include="ITableObject.cs" />
+    <Compile Include="ITypedMethod.cs" />
+    <Compile Include="Loader\RecipeContext.cs" />
+    <Compile Include="Loader\RecipeField.cs" />
+    <Compile Include="Loader\RecipeRecord.cs" />
+    <Compile Include="Nrdo.cs" />
+    <Compile Include="Reflection\DllFolderLookupAssemblies.cs" />
+    <Compile Include="Reflection\IDfnElement.cs" />
+    <Compile Include="Reflection\INrdoCodeBase.cs" />
+    <Compile Include="Reflection\NrdoCodeBase.cs" />
+    <Compile Include="Reflection\NrdoIndex.cs" />
+    <Compile Include="Reflection\NrdoReflection.cs" />
+    <Compile Include="Comparers.cs" />
+    <Compile Include="DBObject.cs" />
+    <Compile Include="Loader\Recipe.cs" />
+    <Compile Include="Loader\RecipeLoader.cs" />
+    <Compile Include="Ntypes.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Reflection\NrdoTable.cs" />
+    <Compile Include="Reflection\NrdoField.cs" />
+    <Compile Include="Reflection\NrdoGetBase.cs" />
+    <Compile Include="Reflection\NrdoGet.cs" />
+    <Compile Include="Reflection\NrdoReference.cs" />
+    <Compile Include="Reflection\NrdoParamBase.cs" />
+    <Compile Include="Reflection\NrdoFieldRef.cs" />
+    <Compile Include="Reflection\NrdoParam.cs" />
+    <Compile Include="Reflection\NrdoParamTable.cs" />
+    <Compile Include="Reflection\NrdoJoin.cs" />
+    <Compile Include="Reflection\NrdoOrderByClause.cs" />
+    <Compile Include="Reflection\NrdoTableIdentity.cs" />
+    <Compile Include="Reflection\NrdoTableRef.cs" />
+    <Compile Include="Scopes\DatabaseScopeInfo.cs" />
+    <Compile Include="Scopes\HttpContextScopeInfoStorage.cs" />
+    <Compile Include="Scopes\HttpOrThreadScopeInfoStorage.cs" />
+    <Compile Include="Scopes\IScopeInfoStorage.cs" />
+    <Compile Include="Scopes\NrdoScope.cs" />
+    <Compile Include="Scopes\NrdoTransactedScope.cs" />
+    <Compile Include="Scopes\ScopeInfo.cs" />
+    <Compile Include="Scopes\StaticGlobalScopeInfoStorage.cs" />
+    <Compile Include="Scopes\ThreadStaticScopeInfoStorage.cs" />
+    <Compile Include="Smelt\LineNumberedText.cs" />
+    <Compile Include="Smelt\SmeltAtom.cs" />
+    <Compile Include="Smelt\SmeltBlock.cs" />
+    <Compile Include="Smelt\SmeltFile.cs" />
+    <Compile Include="Smelt\SmeltLine.cs" />
+    <Compile Include="Smelt\SmeltLiteral.cs" />
+    <Compile Include="Smelt\SmeltNode.cs" />
+    <Compile Include="Smelt\SmeltParser.cs" />
+    <Compile Include="Smelt\SmeltString.cs" />
+    <Compile Include="Smelt\SmeltWord.cs" />
+    <Compile Include="Smelt\TextFragment.cs" />
+    <Compile Include="Smelt\TextLocation.cs" />
+    <Compile Include="Sql\ISqlResult.cs" />
+    <Compile Include="Sql\SqlDataModification.cs" />
+    <Compile Include="Sql\SqlQuery.cs" />
+    <Compile Include="Sql\SqlQueryBuilder.cs" />
+    <Compile Include="Sql\SqlQueryCache.cs" />
+    <Compile Include="Sql\SqlQueryCall.cs" />
+    <Compile Include="Sql\SqlQueryIdentity.cs" />
+    <Compile Include="Sql\SqlQueryWhere.cs" />
+    <Compile Include="Sql\SqlResultRow.cs" />
+    <Compile Include="Sql\SqlValueParam.cs" />
+    <Compile Include="TypedMethodInvoker.cs" />
+    <Compile Include="Util\DependencyUtil.cs" />
+    <Compile Include="Util\LruCache.cs" />
+    <Compile Include="Util\OutputUtil\IOutput.cs" />
+    <Compile Include="Util\OutputUtil\Output.cs" />
+    <Compile Include="Util\OutputUtil\OutputMode.cs" />
+    <Compile Include="Util\Portion.cs" />
+    <Compile Include="Util\OutputUtil\Progress.cs" />
+    <Compile Include="Util\ReferenceEqualityComparer.cs" />
+    <Compile Include="Util\ReflectionUtil.cs" />
+    <Compile Include="Where.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Loader\recipe-spec.html" />
+    <Compile Include="DataBase.cs" />
+    <Compile Include="Loader\FieldValueGetter.cs" />
+    <Compile Include="Loader\ITransformRecipe.cs" />
+    <Compile Include="Loader\Now.cs" />
+    <Compile Include="Loader\RecordKey.cs" />
+    <Compile Include="Loader\Undefined.cs" />
+    <Compile Include="Loader\XsltTransformRecipe.cs" />
+    <Compile Include="Reflection\ILookupAssemblies.cs" />
+    <Compile Include="Reflection\NrdoBeforeStatement.cs" />
+    <Compile Include="Reflection\NrdoObjectType.cs" />
+    <Compile Include="Reflection\NrdoQuery.cs" />
+    <Compile Include="Reflection\ReferencedLookupAssemblies.cs" />
+    <Compile Include="Util\XmlUtil.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Windows.Installer.3.1">
+      <Visible>False</Visible>
+      <ProductName>Windows Installer 3.1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PreBuildEvent>
+    </PreBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
+</Project>

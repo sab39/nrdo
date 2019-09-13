@@ -1,0 +1,330 @@
+template {
+
+  eval csharp4-global.cgl;
+
+  define {
+
+    # Import some generally-useful definitions for csharp.
+    import [csharp4-common.cgl];
+    use class_naming;
+
+    # This is just handy to have around :)
+    set fqdbobject sep : {when $module$ $module$; $dbobject$};
+
+    # Import some generally-useful stuff for sql.
+    import [sql-$dbadapter$.cgl];
+    use db_naming;
+    use csharp_support;
+
+	# Declare where we will write to.
+  } outfile {sep \ {when $module$ initcap intercap . subst : \. $module$; $dbobject$.qu.gen.cs}} define {
+
+    set description {when $description$ $description$; else $Class$};
+
+    # Process all the fields.
+    inside {results; params}
+        given {type; nullable; fname; tblalias; fielddesc} {
+      use field_processing;
+    };
+
+    # Construct the list of parameters in the order of the sql query, if needed.
+    set paramsbysql {
+      when {allof $use_positional$ {not $storedproc$}} list {
+        forall $sql$ when {default $fname$} {
+          extract {fname; type; nullable; tblalias; fielddesc};
+          use field_processing;
+        };
+      }; else {
+        $params$;
+      };
+    };
+
+    # Grab the raw SQL minus any parameter names. This is used to identify whether any table names show up, so the cache can be cleared appropriately
+    # we can leave out the $fname$ bits because we're only looking to see if the table name shows up, fields and params don't matter
+	# alltables gets tables in the current module; dependtables gets tables in other depended modules
+    inside alltables {
+      set stripped_sql sep [ ] forall $sql$ $sqlbefore$;
+      set stripped_sql lcase {[]; $stripped_sql$}; # Turn it into a string
+    };
+    inside dependtables {
+      set stripped_sql sep [ ] forall $sql$ $sqlbefore$;
+      set stripped_sql lcase {[]; $stripped_sql$}; # Turn it into a string
+    };
+
+    # Produce some useful abbreviations of various attributes of this get.
+    set GType {when {not $results$} [Void];
+               else when $multi$ [Multi];
+               else [Single]};
+    # Keep track of whether this is a single-result or multiple-result query.
+    set onecol allof {eq {length $results$} {int 1}} {eq $GType$ Single};
+
+    set GotClass {when {not $results$} [void];
+                else when $multi$ [List<$Class$>];
+                else $Class$};
+    set GClass {when $onecol$ forall $results$ $wtype$; else $GotClass$};
+  } {
+[using NR.nrdo.Attributes;
+using NR.nrdo.Internal;
+using NR.nrdo.Caching;
+using NR.nrdo.Connection;
+using System;
+using System.Linq;
+using System.Collections.Generic;
+[[assembly:NrdoQueries(typeof($fqClass$))[]
+];
+
+when $namespace$ [
+namespace $namespace$ {];
+
+[
+
+// Core nrdo classes.
+using NR.nrdo;
+using NR.nrdo.Util;
+
+[[NrdoQuery("$fqdbobject$", @"]; subst " "" $rawsql$; [", StoredProc=$storedproc$, StoredFunction=$storedfunction$, PreUpgradeHook=]; default pre-upgrade-hook false; [, CacheFileName="$cache_filename$",
+CacheFileContents=@"[[[] ]; when $storedfunction$ sfcache; else {spcache; when {default pre-upgrade-hook} [-preupgrade]}; [ $cache_filename$ [[];
+  when {anyof $storedproc$ $storedfunction$} subst " "" subst [[]] [[[[]] subst [[[] [[[[[] $rawsql$;
+  [[] {
+];
+# Finally a list of all before statements that have run successfully.
+forall $before$ [$name$ ];
+[;
+};")[]];
+box bindex {int 1} {
+  forall $before$ {[
+    [[NrdoBeforeStatement(]; whatsin bindex; [, "$step$", "$name$", "];
+     subst [
+] [\r\n] subst " \" subst \ \\ $statement$;
+    [", Initial=$initial$, Upgrade=$upgrade$)[]];
+    assign bindex plus {whatsin bindex} {int 1};
+  };
+};
+when {defined csharp-attrs} [[[$csharp-attrs$[]];
+[
+[[Serializable[]
+public partial class $Class$ : DBObject<$Class$>];
+    when {defined csharp-implements} [, $csharp-implements$]; [ {
+
+  static $Class$() {
+    nrdoInitialize(() => DataBase.Get(]; when {default dbidentifier} ["$dbidentifier$"]; else [null]; [), ];
+    when $results$ [createFromDR]; else [null];
+    [);
+  }
+
+  private static bool cacheInitialized = false;
+  static partial void InitializeCache($Class$Where where);
+
+];
+  when $results$ {[
+// The calling of a method on default($Class$) normally causes a warning because the value is null. We're using extension methods, so it is in fact okay.
+#pragma warning disable 1720
+  public static $Class$ createFromDR(NrdoResult result) {
+    return new $Class$(];
+    box counter {int 0} {
+      sep [,
+        ] forall $results$ {[
+          ($wtype$) default($Class$).Read$Type$Value("$fname$", result, ]; whatsin counter; [)];
+        assign counter plus {whatsin counter} {int 1};
+      };
+    };
+    [);
+  }
+#pragma warning restore 1720
+
+  private sealed class Cache$Class$ : DB$GType$ObjectCache<$Class$, $Class$Where, Cache$Class$> {
+    public Cache$Class$()
+      : base(];
+        when $multi$ {
+          default cacheminqueries 0;
+          [, ];
+        };
+        [$cachesize$) {];
+        forall $alltables$ when {ne $stripped_sql$ {subst {lcase subst : _ sep : {$module$; $dbobject$}} [] $stripped_sql$}} {[
+          ]; sep [.] {$nsbase$;
+                      when $module$ initcap intercap _ subst [:] [._] $module$;
+                      initcap intercap [_] $dbobject$};
+          [.DataModification.Any += Clear;];
+        };
+        forall $dependtables$ when {ne $stripped_sql$ {subst {lcase subst : _ sep : {$depmodule$; $depdbobject$}} [] $stripped_sql$}} {[
+          ]; sep [.] {$nsbase$;
+                      when $depmodule$ initcap intercap _ subst [:] [._] $depmodule$;
+                      initcap intercap [_] $depdbobject$};
+          [.DataModification.Any += Clear;];
+        }; [
+    }
+
+    protected override string GetMethodName() {
+      return "$fqClass$.Call";
+    }];
+
+    # Caches on qus are disabled unless explicitly enabled
+    when {anyof {le {int default cachesize 0} {int 0}}
+          {eq {default disablecache true} true}} {[
+      protected override bool IsDisabled {
+        get { return true; }
+      }
+    ]}; [
+
+     public override long ModificationCountHash {
+      get {
+        return 0];
+          forall $alltables$ when {ne $stripped_sql$ {subst {lcase subst : _ sep : {$module$; $dbobject$}} [] $stripped_sql$}} {[ +
+            ]; sep [.] {$nsbase$;
+                        when $module$ initcap intercap _ subst [:] [._] $module$;
+                        initcap intercap [_] $dbobject$};
+            [.DataModification.Count];
+          };
+		  forall $dependtables$ when {ne $stripped_sql$ {subst {lcase subst : _ sep : {$depmodule$; $depdbobject$}} [] $stripped_sql$}} {[ +
+            ]; sep [.] {$nsbase$;
+                        when $depmodule$ initcap intercap _ subst [:] [._] $depmodule$;
+                        initcap intercap [_] $depdbobject$};
+            [.DataModification.Count];
+          };
+        [;
+      }
+    }
+  }
+
+  private sealed class $Class$Where : CachingWhere<$Class$, $Class$Where, Cache$Class$> {];
+  }; else [
+  private sealed class $Class$Where : Where<$Class$> {];
+  
+    forall $params$ {[
+
+    private $Wtype$ $fFull$;];
+    };
+    [
+
+    internal $Class$Where(];
+      sep [, ] forall $params$ [$Wtype$ $fFull$];
+      [) {];
+      forall $params$ [
+      this.$fFull$ = $fFull$;];
+      [
+      if (!cacheInitialized) {
+        cacheInitialized = true;
+        InitializeCache(this);
+      }
+    }
+
+    public override bool Equals(object o) {
+      if (o == (object) this) return true;
+      $Class$Where other = o as $Class$Where;
+      return other != null];
+      forall $params$ [ &&
+        object.Equals(@$fFull$, other.@$fFull$)];
+      [;
+    }
+
+    public override int GetHashCode() {
+      return 0];
+      forall $params$ [ ^
+        ((object) @$fFull$ == null ? 0 : @$fFull$.GetHashCode())];
+      [;
+    }
+
+    public override string GetParameters { get { return "[["]; sep [ + "[], [[" ] forall $params$ [ + @$fFull$]; [ + "[]"; } }
+    public override string ToString() {
+      return GetMethodName + "(" + GetParameters + ")";
+    }
+
+    public override string GetMethodName {
+      get {return "$fqClass$.Call";}
+    }
+
+// The calling of a method on default($Class$) normally causes a warning because the value is null. We're using extension methods, so it is in fact okay.
+#pragma warning disable 1720
+    public override void SetOnCmd(NrdoCommand cmd) {];
+      forall $paramsbysql$ {[
+        default($Class$).Set$Type$Parameter(cmd, "$fname$", "]; $sqltype$; [", @$fFull$);];
+      }; [
+    }
+#pragma warning restore 1720
+
+    public override bool IsStoredProc {get {return $storedproc$;}}
+
+    public override string SQLStatement {
+      get {
+        return "];
+
+        when $storedproc$ {
+          sep _ {when $module$ trans : _ $module$; $dbobject$};
+        }; else {
+          # Join the where strings together with "$param_char$field_name" in between, and
+          # escape C# reserved characters (inc newline).
+          subst [
+] [\n" +
+"] subst ["] [\"] subst ['] [\'] subst [\] [\\]
+          {[];forall $sql$ {$sqlbefore$;when {default fname} {$param_char$; when {not $use_positional$} $fname$}}};
+        };
+        [";
+      }
+    }
+  }
+];
+  box pindex {int 1} {
+    forall $params$ {[
+      [[NrdoParam(]; whatsin pindex; [, "$fname$", typeof($type$)]; when $sqltype$ [, DbType="$sqltype$"]; [, Nullable=$nullable$)[]];
+      assign pindex plus {whatsin pindex} {int 1};
+    };
+  }; [
+  public static $GClass$ Call(];
+    sep [, ] {forall $params$ [$wtype$ $fFull$];
+              #$intfromto$
+              }; [) {
+    ];
+    when $results$ [return (($GotClass$)];
+    [get$GType$(new $Class$Where(];
+    sep [, ] forall $params$ [$fFull$];
+    [))];
+    when $results$ [)];
+    when $onecol$ forall $results$ [.$FName$]; [;
+  }];
+      [
+      protected $Class$(];
+      sep [, ] forall $results$ [$wtype$ $fName$]; [) {];
+        forall $results$ [
+          this.$fName$ = $fName$;];
+        [
+      }
+
+      // Properties];
+
+      box rindex {int 0} {
+        forall $results$ {[
+
+        private $wtype$ $fName$;
+
+        [[NrdoField(]; whatsin rindex;
+        [, "$fname$", Nullable=$nullable$]; when $sqltype$ [, DbType="$sqltype$"]; [)[]
+        public $wtype$ $FName$ {
+          get {
+            return $fName$;
+          }
+        }
+
+        public bool Has$FName$ {
+          get {];
+          when {allof $primitive$ {not $nullable$}} [
+            return true;];
+          else [
+            return $fName$ != null;]; [
+          }
+        }
+
+        public static NRDOComparer<$Class$> $FName$Order {
+          get {
+            return NRDOComparer<$Class$>.Create<$type$>(@$class$ => @$class$.$FName$);
+          }
+        }];
+          assign rindex plus {whatsin rindex} {int 1};
+        };
+      }; [
+}];
+
+when $namespace$ [
+}];
+
+  };
+};

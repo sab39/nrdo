@@ -1,0 +1,14 @@
+query multi $nrdotablemodule$:$fileinputname$ {
+
+  sql [
+    -- Insert SQL statement here
+  ];
+
+  params {
+    # Insert query parameters here
+  };
+
+  results {
+		# Insert result fields here
+	};
+};

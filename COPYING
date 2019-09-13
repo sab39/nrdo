@@ -1,0 +1,77 @@
+Copyright license for nrdo
+
+nrdo is distributed under two licenses: the GNU General Public License (GPL),
+and the GNU Lesser General Public License (LGPL). The GPL applies to the nrdo
+development tools, and the LGPL to the nrdo runtime libraries. You can find a
+copy of the GPL in the file COPYING.gpl, and the LGPL in the file COPYING.lgpl.
+
+You may distribute and/or modify the files in nrdo under the terms of the
+respective license. Each source code file indicates which license it is released
+under. For informational purposes only, here is a summary of what licenses
+apply to each source directory. In the case of a conflict between this summary
+and the header of the source code file itself, the source code file is
+authoritative.
+
+nrdo/
++- csharp/
+|  +- NRDO library        LGPL
++- src/
+|  +- gnu/
+|  |  +- text/            *See below
+|  +- net/
+|     +- netreach/
+|        +- cgl/          LGPL
+|        +- nrdo/         LGPL
+|        |  +- tools/     GPL
+|        +- nrtl/         LGPL
+|        |  +- controls/  LGPL
+|        +- smelt/        LGPL
+|        +- util/
+|           +- misc/      LGPL
++- templates/             GPL
++- tests/                 GPL
++- tools/                 GPL
+
+There is a potential ambiguity with regard to the files in the templates/
+directory - they are used to generate source code that contains a lot of text
+from the templates themselves. If the templates are under the GPL, are these
+source code files also covered by the GPL? Section 0, paragraph 2 of the GPL
+says that the output of the program is only covered if it constitutes a work
+based on the program, but doesn't discuss what conditions would make that true.
+
+Since this situation is not made explicit in the terms of the license itself,
+I will clarify explicitly: the GPL does not apply to source code files
+generated from these templates. I consider these source code files to be
+effectively the same as binary object code, where the source code is your .dfn
+files. Since you unquestionably hold the copyright on your own .dfn files, you
+also hold the copyright on the "object" code generated from it, even though it
+includes some text from the template files.
+
+Of course, if you want to modify the output source code beyond what is possible
+from the .dfn file, you can either give up the automated maintenance provided
+by nrdo, or change the template file. If you change the template file, then the
+GPL does apply.
+
+*One file in nrdo is imported from an external source: the
+gnu.text.LineBufferedReader class, by Per Bothner. This file does not state its
+license explicitly, and modifying the file to add a statement of its license
+would require that all of nrdo be licensed under the GPL only, not LGPL.
+
+The following is the license of src/gnu/text/LineBufferedReader.java (also
+available as src/gnu/text/COPYING):
+
+The Java classes (with related files and documentation) in these packages
+are copyright (C) 1996, 1997, 1998, 1999  Per Bothner.
+     
+These classes are distributed in the hope that they will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+     
+These classes are free software.  You can use and re-distribute a class
+without restriction (in source or binary form) as long as you use a
+version that has not been modified in any way from a version released
+by Per Bothner, Red Hat inc, or the Free Software Foundation.
+You may make and distribute a modified version, provided you follow
+the terms of the GNU General Public License; either version 2,
+or (at your option) any later version.

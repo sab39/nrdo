@@ -1,0 +1,10 @@
+﻿table $nrdotablemodule$:$fileinputname$ {
+	fields {
+		int id int notnull readonly [the id];
+
+		# Insert fields here
+	};
+	pkey sequenced id;
+
+	# Insert gets and references here
+};

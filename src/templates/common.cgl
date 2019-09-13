@@ -1,0 +1,25 @@
+export {
+
+  # Stuff that needs to be done every time we encounter a field (or param)
+  declare common_field
+      given {fname; tblalias; fielddesc; type; sqltype; nullable} {
+    set fName intercap [_] $fname$;
+    set FName initcap $fName$;
+    set fTable when {ne $tblalias$ [self]} intercap [_] $tblalias$;
+    set ffull sep [_] {when {ne $tblalias$ [self]} $tblalias$; $fname$};
+    set fFull intercap [_] $ffull$;
+    set FFull initcap $fFull$;
+    set Fielddesc initcap $fielddesc$;
+  };
+
+  # Extract every value from a field.
+  declare common_extract_field given {
+    fname; tblalias; fielddesc; type; sqltype; nullable;
+    fName; FName; fTable; ffull; fFull; FFull; Fielddesc;
+  } {
+    extract {
+      fname; tblalias; fielddesc; type; sqltype; nullable;
+      fName; FName; fTable; ffull; fFull; FFull; Fielddesc;
+    };
+  };
+};

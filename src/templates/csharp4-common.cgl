@@ -1,0 +1,48 @@
+export {
+
+  import [common.cgl];
+
+  declare type_wrapping given {type; nullable; sqltype} {
+    set type {
+      when {eq $type$ String} string;
+      else when {eq $type$ boolean} bool;
+      else when {eq $type$ Date} DateTime;
+      else when {eq $type$ Timestamp} DateTime;
+      else $type$;
+    };
+    set Type {initcap $type$};
+    set Wtype {when {eq $type$ string} string; else $type$?};
+    set primitive {ne $type$ string};
+    set wtype {when $nullable$ $Wtype$; else $type$};
+  };
+
+  # Stuff that needs to be done every time we encounter a field (or param)
+  # This is a superset of type_wrapping that also includes handling the field
+  # names and description.
+  declare field_processing
+      given {fname; tblalias; fielddesc; type; nullable; sqltype} {
+    use common_field;
+    use type_wrapping;
+  };
+
+  # Extract every value from a field.
+  declare extract_all_field given {
+    fname; tblalias; fielddesc; type; sqltype; nullable;
+    fName; FName; fTable; ffull; fFull; FFull; Fielddesc;
+    Wtype; primitive; Wrapped; wrapped; unwrapped; wtype; Type;
+    dbtype; IDataType; Ntype;
+  } {
+    use common_extract_field;
+    extract {Wtype; primitive; Wrapped; wrapped; unwrapped; wtype; Type;
+             dbtype; IDataType; Ntype};
+  };
+
+  # Convert between a NRDO-format dbobject name and a C#-format namespace and
+  # classname.
+  declare class_naming given {module; dbobject; nsbase} {
+    set class intercap [_] $dbobject$;
+    set Class initcap $class$;
+    set namespace sep [.] {$nsbase$; when $module$ initcap intercap _ subst [:] [._] $module$};
+    set fqClass sep [.] {$namespace$; $Class$};
+  };
+};

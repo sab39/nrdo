@@ -1,0 +1,11 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <Target Name="BeforeResolveReferences">
+    <CreateItem Include="Sources.txt">
+      <Output TaskParameter="Include" ItemName="GeneratedSources"/>
+    </CreateItem>
+    <ReadLinesFromFile File="@(GeneratedSources)">
+      <Output TaskParameter="Lines" ItemName="Compile" />
+    </ReadLinesFromFile>
+  </Target>
+</Project>

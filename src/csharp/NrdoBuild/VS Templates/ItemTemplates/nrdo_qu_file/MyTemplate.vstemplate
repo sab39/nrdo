@@ -1,0 +1,19 @@
+<VSTemplate Version="3.0.0" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005" Type="Item">
+  <TemplateData>
+    <DefaultName>nrdo_query.qu</DefaultName>
+    <Name>nrdo_query</Name>
+    <Description>A nrdo query definition</Description>
+    <ProjectType>CSharp</ProjectType>
+    <SortOrder>10</SortOrder>
+    <Icon>nrdo_dfn_file.ico</Icon>
+  </TemplateData>
+  <TemplateContent>
+    <References />
+    <ProjectItem SubType="" TargetFileName="$fileinputname$.qu" ReplaceParameters="true">my_query.qu</ProjectItem>
+    <ProjectItem SubType="Code" TargetFileName="$fileinputname$.qu.cs" ReplaceParameters="true">my_query.qu.cs</ProjectItem>
+  </TemplateContent>
+  <WizardExtension>
+    <Assembly>CMSVisualStudio, Version=1.0.0.0, Culture=neutral, PublicKeyToken=1498a00a7a98a0e6, processorArchitecture=MSIL</Assembly>
+    <FullClassName>CMSVisualStudio.MangleNames</FullClassName>
+  </WizardExtension>
+</VSTemplate>

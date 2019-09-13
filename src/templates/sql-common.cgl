@@ -1,0 +1,175 @@
+export {
+  declare db_naming given {module; dbobject} {
+    set dbname sep [_] {when $module$ trans [:] [_] $module$; $dbobject$};
+    set cache_filename sep [.] {$schema$; $dbname$};
+  };
+  declare table_naming given {module; dbobject; existing_table} {
+    use db_naming;
+    set table {
+      when $existing_table$ subst . [[].[[] $existing_table$;
+      else $dbname$;
+    };
+  };
+  declare sql_statements given {gets; nonpkeys; pkeys; fields; table; hash} {
+    inside pkeys given {fname; hash} {use sequenced_pkey};
+    set insert_sql list {
+      {set sqlbefore {
+        [insert into $<$$table$$>$ (];
+        sep [, ] {
+          forall $nonpkeys$ [$<$$fname$$>$];
+          forall $pkeys$ when {not $sequenced$} [$<$$fname$$>$];
+        };
+        [) values (];
+      }};
+      sep {
+        set sqlbefore [, ];
+      } {
+        forall $nonpkeys$ {
+          set sqlbefore [];
+          use extract_all_field; use field_processing;
+        };
+        forall $pkeys$ when {not $sequenced$} {
+          set sqlbefore [];
+          use extract_all_field; use field_processing;
+        };
+      };
+      {set sqlbefore [)]};
+    };
+    set insert_sql_with_identity list {
+      {set sqlbefore {
+        [set identity_insert $<$$table$$>$ on; insert into $<$$table$$>$ (];
+        sep [, ] {
+          forall $nonpkeys$ [$<$$fname$$>$];
+          forall $pkeys$ [$<$$fname$$>$];
+        };
+        [) values (];
+      }};
+      sep {
+        set sqlbefore [, ];
+      } {
+        forall $nonpkeys$ {
+          set sqlbefore [];
+          use extract_all_field; use field_processing;
+        };
+        forall $pkeys$ {
+          set sqlbefore [];
+          use extract_all_field; use field_processing;
+        };
+      };
+      {set sqlbefore [); set identity_insert $<$$table$$>$ off;]};
+    };
+    set update_sql list {
+      {set sqlbefore [update $<$$table$$>$ set ]};
+      sep {set sqlbefore [, ]} forall $nonpkeys$ {
+        set sqlbefore [$<$$fname$$>$ = ];
+        use extract_all_field; use field_processing;
+      };
+      {set sqlbefore [ where ]};
+      sep {set sqlbefore [ and ]} forall $pkeys$ {
+        set sqlbefore [$<$$fname$$>$ = ];
+        use extract_all_field; use field_processing;
+      };
+    };
+    set delete_sql list {
+      {set sqlbefore [delete from $<$$table$$>$ where ]};
+      sep {set sqlbefore [ and ]} forall $pkeys$ {
+        set sqlbefore [$<$$fname$$>$ = ];
+        use extract_all_field; use field_processing;
+      };
+    };
+    set select_sql {
+      [select ];
+      sep [, ] forall $fields$ [$<$self$>$.$<$$fname$$>$];
+      [ from $<$$table$$>$ $<$self$>$];
+    };
+    inside gets given {tables; fields; joins; where; orderby} {
+      set where_sql list {
+        sep {set sqlbefore [ where ]} {
+          {set sqlbefore
+              forall $tables$ when $onlyone$ [, $<$$tblname$$>$ $<$$tblalias$$>$]};
+          sep {set sqlbefore [ and ]} {
+            forall $fields$ when $onlyone$ list {
+              {set sqlbefore [(]};
+              when $nullable$ list {
+                {set sqlbefore [(];
+                 use extract_all_field; use field_processing;};
+                {set sqlbefore [ is null and $<$$tblalias$$>$.$<$$fname$$>$ is null) or ]};
+              };
+              {set sqlbefore [$<$$tblalias$$>$.$<$$fname$$>$ = ];
+               use extract_all_field; use field_processing};
+              {set sqlbefore [)]};
+            };
+            forall $joins$ when $onlyone$ {
+              set sqlbefore [$<$$tblalias1$$>$.$<$$fname1$$>$ = $<$$tblalias2$$>$.$<$$fname2$$>$];
+            };
+            when {forall $tables$ when {not $onlyone$} [existing]} list {
+              {set sqlbefore [exists (select * from ]};
+              sep {set sqlbefore [ where ]} {
+                {set sqlbefore sep [, ] forall $tables$ when {not $onlyone$}
+                    [$<$$tblname$$>$ $<$$tblalias$$>$]};
+                sep {set sqlbefore [ and ]} {
+                  forall $fields$ when {not $onlyone$} list {
+                    {set sqlbefore [(]};
+                    when $nullable$ list {
+                      {set sqlbefore [(];
+                       use extract_all_field; use field_processing;};
+                      {set sqlbefore [ is null and $<$$tblalias$$>$.$<$$fname$$>$ is null) or ]};
+                    };
+                    {set sqlbefore [$<$$tblalias$$>$.$<$$fname$$>$ = ];
+                     use extract_all_field; use field_processing};
+                    {set sqlbefore [)]};
+                  };
+                  forall $joins$ when {not $onlyone$} {
+                    set sqlbefore [$<$$tblalias1$$>$.$<$$fname1$$>$ = $<$$tblalias2$$>$.$<$$fname2$$>$];
+                  };
+                  when $where$ list {
+                    {set sqlbefore [(]};
+                      forall $where$ list {
+                        when {default fname} {extract sqlbefore;
+                                              use extract_all_field;
+                                              use field_processing};
+                        when {not default fname} {extract sqlbefore};
+                      };
+                    {set sqlbefore [)]};
+                  };
+                };
+              };
+              {set sqlbefore [)]};
+            };
+            when {
+              allof $where$ {not forall $tables$ when {not $onlyone$} [exists]}
+            } list {
+              {set sqlbefore [(]};
+              forall $where$ list {
+                when {default fname} {extract sqlbefore;
+                                      use extract_all_field;
+                                      use field_processing};
+                when {not default fname} {extract sqlbefore};
+              };
+              {set sqlbefore [)]};
+            };
+          };
+        };
+        when $orderby$ list {
+          {set sqlbefore [ order by ]};
+          sep {set sqlbefore [, ]} {
+            forall $orderby$ list {
+              when $sql$ forall $sql$ list {
+                when {default fname} {extract sqlbefore;
+                                      use extract_all_field;
+                                      use field_processing};
+                when {not default fname} {extract sqlbefore};
+              };
+              when $fname$ {
+                set sqlbefore [$<$$tblalias$$>$.$<$$fname$$>$];
+              };
+              when $descending$ {
+                set sqlbefore [ desc];
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+};

@@ -1,0 +1,462 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <title>Recipes</title>
+    </head>
+    <body>
+        <h1>
+            Recipe File Format Specification</h1>
+        <p>
+            A recipe file is an xml document containing records to be loaded into the database.
+            The root element of the xml must always be &lt;nrdo.recipe&gt;. Within this, each
+            element corresponds to a database record.</p>
+        <p>
+            Note: This document deliberately does not specify an xml namespace in which its
+            elements are defined. This is because the set of elements that are legal depends
+            entirely on what tables are defined in the project in question. Implementation-wise,
+            any project using nrdo can specify its own recipe namespace, and nrdo will generate
+            a schema for that namespace defining the elements for tables in that project. The
+            recipe loader will ignore the namespace - even if no namespace is specified at all
+            - and process elements based only on their local name.</p>
+        <h2>
+            Raw vs Friendly format</h2>
+        <p>
+            The engine that processes recipe files is fairly simple and expects each record
+            to be listed sequentially in such a way that the processing can be done one record
+            at a time, without any complex dependency evaluation. Such a recipe is called a
+            <em>raw format</em> recipe. Because that format isn't terribly convenient to write,
+            an expanded, more friendly format is also available. Everything that's legal in
+            a raw format recipe is also legal in a <em>friendly format</em> recipe, but in the
+            friendly format the relationships between records can be represented more directly
+            using nesting and attributes. When processing, nrdo transforms the friendly format
+            recipe into raw format before loading it.</p>
+        <p>
+            First, the elements common to both raw and friendly format will be described, then
+            the additional features available in friendly format will be covered.</p>
+        <h2>
+            Tables</h2>
+        <p>
+            Inside the &lt;nrdo.recipe&gt; element each child element must correspond to a database
+            table. The name of the element is the full dfn-file syntax name of the table, with
+            ":" replaced by ".". For example, a table called core:panel_type (from a Core/panel_type.dfn
+            file) would be represented by a &lt;core.panel_type&gt; element, and core:access:target
+            (from Core/Access/target.dfn) by &lt;core.access.target&gt;.</p>
+        <h2>
+            Context and the nrdo.id Attribute</h2>
+        <p>
+            Every element inside the recipe may have a nrdo.id attribute, and in the case of
+            tables with a sequenced primary key, this attribute is required (with one exception
+            in friendly format, see 'References as Nested Elements' below). The value of this
+            field uniquely identifies the record to the recipe processing engine. The value
+            may be any valid xml identifier except that it may not contain ".".</p>
+        <p>
+            The mapping between nrdo.id values and database records is stored in the <em>recipe
+                context</em>. At minimum, the recipe context persists for the duration of loading
+            the recipe, but in most cases applications will choose to save it and reuse the
+            same context to load future recipes into the same database. What's stored in the
+            context for each record consists of the nrdo.id value, and some set of field values
+            including at minimum the values of the primary key fields. The context may also
+            keep track of which fields are known to <em>exist</em> for a particular record even
+            if no value for that field is known. This allows future recipes to distinguish between
+            the case where a field was newly added to the database versus the case where no
+            recipe has ever affected the value of the field for that record.</p>
+        <p>
+            It is not illegal for the same record (with the same nrdo.id value) to be referred
+            to more than once within the same context, or even within the same recipe. If it
+            is, that record will simply be processed twice - this can on occasion be useful.
+            It IS, however, illegal to try to use the same nrdo.id value to refer
+            to records on two different tables. This will be detected when trying to add the
+            second use to the context and the recipe will fail to load.</p>
+        <p>
+            When looking up a record based on nrdo.id, unless the record has already been retrieved
+            (or modified) during this recipe load, the record will be retrieved from the database
+            based on primary key. If no result is returned, the record will be removed from
+            the context and the behavior will be identical to what would happen if the record
+            was not known in the context at all.</p>
+        <p>
+            Since this depends on being able to call the primary key getter, tables with "nocode"
+            specified on the pkey in the dfn file cannot be used in recipes.</p>
+        <h2>
+            Fields and Field Values</h2>
+        <p>
+            For each field defined on the table, an attribute can be specified on the element
+            with the name of the field and the value that field should take. If the attribute
+            value starts with ":", it is treated specially and parsed by nrdo; otherwise, it
+            will be converted by the .NET framework's TypeDescriptor.GetConverter method for
+            the type of the field in question. Which means that string fields will accept the
+            value as-is, integer fields will go through the equivalent of int.Parse, DateTime
+            through DateTime.Parse etc.</p>
+        <p>
+            Values starting in ":" will be interpreted as follows:</p>
+        <ul>
+            <li>Values starting in "::" will have the first ":" stripped off and then be parsed
+                by GetConverter, so a literal value that starts with ":" can be included in a recipe
+                by adding an extra ":" in front.</li>
+            <li>The special value ":null" corresponds to a database null</li>
+            <li>A value of the form ":x.y" will be interpreted as follows: a record with nrdo.id "x"
+                will be looked up in the context. If no such record is found, the result is a special
+                <em>undefined</em> value. Otherwise, that record is fetched from the database based
+                on the primary key value for it saved in the context (and if, again, it can't be
+                found, the value is undefined). Otherwise, the result is the value of the field
+                called "y" on that object. It is an error if there is no field called "y".</li>
+        </ul>
+        <h2>
+            Relationship between nrdo.id and primary key</h2>
+        <p>
+            If a value is given for all fields of the primary key, then the record will be looked
+            up in the context based on those values as well as based on the nrdo.id if specified.
+            Every element must specify either a nrdo.id or values for all the primary key fields.
+            For this purpose, a field that evaluated as undefined is treated as not having been
+            specified. Furthermore, if the record is not found in the context based on the primary
+            key, it is also looked up in the database (this is equivalent to nrdo.find.by lookup
+            described below, but done sooner). Either way, the lookup based on primary key must
+            not contradict the lookup based on nrdo.id. Specifically, it is an error if:</p>
+        <ul>
+            <li>The nrdo.id was specified, but the primary key lookup found a record with a different
+                nrdo.id.</li>
+            <li>The primary key was specified, but the nrdo.id lookup found a record where one or
+                more fields of the primary key were different.</li>
+        </ul>
+        <p>
+            If the nrdo.id is specified, but the record in the context, found by primary key
+            lookup, did not have a nrdo.id, then the specified nrdo.id is associated with that
+            record thereafter.</p>
+        <h2>
+            Mapping to an existing record using nrdo.find</h2>
+        <p>
+            A record in the database may already be present as a result of something other than
+            running a recipe. This will be particularly important for attempting to use recipes
+            in the context of applications built against pre-recipe versions of nrdo, but can
+            apply in other situations also. The recipe infrastructure therefore provides a way
+            to locate an existing database record and put it in the context associated with
+            a particular nrdo.id.</p>
+        <p>
+            If the attribute nrdo.find.by is present on an element, its value must be the name
+            of a get defined on the table. This is the nrdo-level name rather than the C# name,
+            so to refer to the get that C# calls GetById, the value specified should be "id".
+            The get in question must be a single get, and define no params and no fields other
+            than on the current table. Also, for each field specified in the get, that attribute
+            must be present on the element (although in the case of friendly syntax, it may
+            be implicit based on a reference rather than explicit, see the discussion of references
+            below). Before processing the element, if the nrdo.id is not already known in the
+            context, the recipe engine will invoke the specified
+            get with the field values specified in the attributes (however, if any of those
+            values evaluate to <em>undefined</em>, this step will be skipped). If a non-null
+            value is returned, the primary key of that value will be looked up in the context.
+            If it is found there, an error is reported, as it must have a different nrdo.id
+            (or it would have been found by nrdo.id lookup in an earlier step), and this is
+            illegal. Otherwise, it is added to the context with its primary key will associated
+            with the specified nrdo.id.
+            Processing then continues as normal regardless of whether it was found or not.</p>
+        <p>
+            If the attribute nrdo.find.where is present on an element [NOTE: this may not be
+            implemented in the first release, only if it turns out to be necessary], it will
+            be interpreted as a where clause for an sql statement to look up the primary key
+            of the record in question. That is, nrdo.find.by="id" id="15" is more or less equivalent
+            to nrdo.find.where="id=15". This allows searches more complex than those possible
+            using nrdo.find.by, but is not recommended in general. As a workaround until this
+            is implemented, add a get on the table with the appropriate "where" clause and use
+            it in nrdo.find.by.</p>
+        <p>
+            A corollary of the rules dictating which situations result in errors is that if
+            all the fields of the primary key are specified, nrdo.find.by and nrdo.find.where
+            are useless: either redundant (if the pkey get is specified) or illegal (if any
+            record might be returned OTHER than the one that the pkey get would return).
+            Therefore it is illegal to specify them in that case.</p>
+        <p>
+            Neither nrdo.find.by nor nrdo.find.where can be specified on an element that does not
+            have a nrdo.id.</p>
+        <h2>
+            Specifying constraints using nrdo.exists</h2>
+        <p>
+            It may be useful to specify requirements related to the state of the database, particularly,
+            to avoid unintentionally inserting a row when the intention was to simply look up
+            information about it. If that row isn't present it would generally be preferable
+            to report an error rather than adding it. Similarly it may be that this recipe would
+            clash with some other information if present, so it's preferable to report an error
+            than attempt to blindly continue.</p>
+        <p>
+            If the attribute nrdo.exists is present on an element, it may have one of the three
+            values "required", "permitted", or "error". If the value is "required", an error
+            will be reported unless the record corresponding to that element exists in the database
+            and the context. If the value is "error", an error will be reported IF the record
+            corresponding to that element exists in the database and the context. If the value
+            is "permitted" or this attribute is absent entirely, the record will be used if
+            present, but processing will continue regardless.&nbsp;</p>
+        <h2>
+            Specifying what to do using nrdo.action</h2>
+        <p>
+            Once this point in processing is reached for each element in the recipe, we now
+            have a set of field values and know whether the record corresponds to an existing
+            row in the database, or not - and if so, we have the corresponding object in memory.
+            What happens next depends on the value of the nrdo.action attribute, if present;
+            if not, the default behavior is equivalent to nrdo.action="update".</p>
+        <ul>
+            <li>nrdo.action="none" - Only nrdo.id, nrdo.find and nrdo.exists attributes can be specified
+                and any fields needed for nrdo.find. The context is updated to associate the nrdo.id
+                with the primary key of the record, if applicable, and nothing else is done.</li>
+            <li>nrdo.action="ensure" - If the record already exists, all field attributes are ignored
+                and the behavior is the same as "none". Otherwise a new record is created and associated
+                with the context based on the values of all the field attributes.</li>
+            <li>nrdo.action="update" - If the record exists, any fields where the value is stored
+                in the context and matches the database will be updated to the value specified in
+                the attribute if one is present, but if the context doesn't store a value or the
+                value already matches it'll be left alone. If the record doesn't exist, it's created.
+                This is the default behavior.</li>
+            <li>nrdo.action="replace" - All the fields that are specified in attributes are updated,
+                regardless of what's in the context. The values are saved as known in the context
+                too. If the record doesn't exist, it's created.</li>
+            <li>nrdo.action="delete" - If the record exists, it's deleted. Like "none", only nrdo.id,
+                nrdo.find and nrdo.exists attributes can be specified and any fields needed for
+                nrdo.find. The context is updated to remove all reference to this record.</li>
+        </ul>
+        <p>
+            If the undefined value shows up in any field which is to be set, it is an error,
+            unless the field is a sequenced pkey. If a value is present for a sequenced pkey
+            field on a record that doesn't exist, that's also an error. Readonly fields, in
+            general, are only set for newly created records; they will be ignored for existing
+            records, except for purposes of looking up the record by primary key or nrdo.find.by.
+            It is, however, an error to specify a readonly field that is <em>not</em> being
+            used for one of those two purposes if nrdo.exists="required".</p>
+        <p>
+            Not all readonly fields need be specified for new records; any omitted fields will
+            take the C# default value for their type.</p>
+        <h2>
+            References as attribute</h2>
+        <p>
+            One "friendly" feature that is available in raw format is the ability to describe
+            certain kinds of reference relationships explicitly, rather than needing to specify
+            the individual field or fields that make up the reference. Only the simplest kinds
+            of reference can be described this way, however,
+            and it's helpful to define explicitly exactly which references those are.</p>
+        <p>
+            A reference is <em>eligible</em> if it's a single reference, contains no extra tables,
+            fields or parameters, and all joins are directly from the source table to the destination
+            table ("joins {* to *}", or "by"). The reference name refers to the nrdo-level name,
+            which (for any reference meeting these criteria of eligible) is the name of the
+            destination table, unless "called" is specified. Note that this definition of eligible
+            is also used in several friendly format features.</p>
+        <p>
+            If an eligible reference exists from a table, an attribute with the name of that
+            reference can be given specifying the nrdo.id of a record on the destination table.
+            This is equivalent to setting the field(s) involved in the reference
+            to the value of the corresponding field on the named record. For example, if the
+            core:template table has:</p>
+        <p>
+            references single core:surface {fkey; by {surface_id id}};</p>
+        <p>
+            Then the line &lt;core.template surface="a_surface"/&gt; is equivalent to &lt;core.template
+            surface_id=":a_surface.id"/&gt;. If more than one field is involved in the reference,
+            all of them will be set the same way. It is illegal to specify any of the fields
+            involved in the reference explicitly if a reference is specified in this way. It
+            is also illegal for the referenced nrdo.id to refer to any table type other than
+            the target table of the reference.</p>
+        <h1>
+            Friendly Format Features</h1>
+        <p>
+            In friendly format, all the same features are present as in raw, but some extra
+            capabilities are available to make the relationships between tables easier to represent
+            in an intuitive way. Since relationships between tables in nrdo are embodied as
+            references, it's unsurprising that many of the friendly format features relate to references, and specifically to <em>eligible</em> references as defined above.</p>
+        <h2>
+            Field as nested element</h2>
+        <p>
+            Sometimes the desired value for a string field is long, and may contain
+            XML or HTML content that is annoying to put into an attribute due to the
+            need to escape &lt;, &gt;, &amp; and &quot; characters. In friendly format,
+            any field whose C# type is "string" may appear as a nested element with the name
+            of the field. If this element has the attribute "escaped" with the value "true",
+            the content must be a string with no nested elements, and any XML-special characters
+            must be escaped. Otherwise
+            (if the "escaped" attribute is absent or has the value "false"), the content must be well-formed XML but does not need
+            to be escaped. For example, if Core/layout.dfn contains a field</p>
+        <pre>string content ntext nullable readwrite [the content of the layout];</pre>
+        <p>
+            then</p>
+        <pre>&lt;core.layout nrdo.id="a_layout"&gt;
+  &lt;content&gt;&lt;h1&gt;Heading&lt;/h1&gt;&lt;/content&gt;
+&lt;/core.layout&gt;
+</pre>
+        <p>
+            is equivalent to</p>
+        <pre>&lt;core.layout nrdo.id="a_layout"&gt;
+  &lt;content escaped="true"&gt;&amp;lt;h1&amp;gt;Heading&amp;lt;/h1&amp;gt;&lt;/content&gt;
+&lt;/core.layout&gt;
+</pre>
+        <p>
+            which is in turn equivalent to</p>
+        <pre>&lt;core.layout nrdo.id="a_layout" content="&amp;lt;h1&amp;gt;Heading&amp;lt;/h1&amp;gt;"/&gt;
+</pre>
+        <h2>
+            References as nested element</h2>
+        <p>
+            Another common scenario is that two related elements are to be created together.
+            If an eligible reference exists from a table to the sequenced primary key of another
+            table, the corresponding element may have
+            a nested element with the name of that reference. That will be transformed into
+            a record of the target type which gets placed in front of the containing element,
+            and the fields that make up the reference set accordingly. Also, in this situation
+            (only!) the nrdo.id attribute is optional on the inner element, as long as a nrdo.id is
+            specified (either explicitly or implied by this same rule) on the outer element;
+            it will be automatically set to the nrdo.id of the container followed by "_"
+            followed by the name of the reference. An example might help make this clear:</p>
+        <pre>&lt;core.template nrdo.id="a_template"&gt;
+  &lt;surface/&gt;
+&lt;/core.template&gt;
+</pre>
+<p>This will transform into:</p>
+<pre>&lt;core.surface nrdo.id="a_template_surface"/&gt;
+&lt;core.template nrdo.id="a_template" surface="a_template_surface"/&gt;
+</pre>
+<p>Which in turn as mentioned above (References as Attribute) is equivalent to:</p>
+<pre>&lt;core.surface nrdo.id="a_template_surface"/&gt;
+&lt;core.template nrdo.id="a_template" surface_id=":a_template_surface.id"/&gt;
+</pre>
+        <p>
+            </p>
+        <p>
+            Any attributes on the &lt;surface&gt; element will be transparently moved to the
+            &lt;core.surface&gt; element that gets created. nrdo.find.* attributes cannot be
+            specified on the inner (&lt;surface&gt; in this case) elements.</p>
+        <h2>
+            Back-reference as nested element</h2>
+        <p>
+            If there is exactly one and only one eligible reference from one table to another,
+            it is also possible to nest the elements the other way around. For example, if the
+            core:panel_type table has a reference to core:feature, the following is permitted:</p>
+        <pre>&lt;core.feature nrdo.id="a_feature"&gt;
+  &lt;panel_type nrdo.id="a_panel_type"/&gt;
+&lt;/core.feature&gt;</pre>
+        <p>
+            will transform into:</p>
+        <pre>&lt;core.feature nrdo.id="a_feature"/&gt;
+&lt;core.panel_type nrdo.id="a_panel_type" feature="a_feature"/&gt;</pre>
+        <p>
+            (the further transformation from feature= to feature_id= goes without saying by
+            now)</p>
+        <p>
+            The rules as to what the nested element should be called in this case are a little
+            complex, mainly because the right answer is "obvious" in each case but it's not
+            so obvious what the set of rules is that gets there.</p>
+        <p>
+            Essentially, the "core." prefix can be removed as long as (a) that wouldn't result
+            in a clash with an eligible reference on the containing table (<em>references as nested
+                element</em> always takes precedence), (b) the containing table starts with the same module name
+            - including that if the containing table is "store.coupons.coupon", tables with
+            a "store." prefix can have it removed, as long as (c) that wouldn't result in a
+            clash with another table that matches more of the prefix, eg if there was a "store.coupons."
+            table with the same name as the "store." one. Also, for the purposes of simplifying
+            the transform and simplifying intellisense, if a prefix <em>can</em> be removed
+            this way, it must be.</p>
+        <p>
+            One more example of what this allows:</p>
+        <pre>&lt;core.template name="Basic Template"&gt;
+  &lt;surface&gt;
+    &lt;panel panel_type="layout_panel_type"&gt;
+    &lt;panel panel_type="content_panel_type"&gt;
+  &lt;/surface&gt;
+&lt;/core.template&gt;</pre>
+        <p>
+            Notice how the nesting defines the relationships naturally even though both template
+            and panel reference surface, and it will all transform into one linear list creating
+            the surface first, then the template and the panels.</p>
+        <h2>
+            Interaction between references as nested element and nrdo.find</h2>
+        <p>
+            There's one particular interaction which requires some clever handling during the
+            transform, best illustrated by an example from cmScribe. This is roughly how we
+            will write a recipe to define panel types while also picking up the right ids for
+            existing sites where the panel types have already&nbsp; been declared (although
+            my current plan is to make the insertion of the target element automatic via a further
+            transform done first, it'll still be there).</p>
+        <pre>&lt;core.feature name="Core" nrdo.id="core_feature" nrdo.find.by="name"&gt;
+  &lt;panel_type name="Welcome" nrdo.id="welcome_panel_type" source_file="Core/Welcome.ascx" nrdo.find.by="source_file"&gt;
+    &lt;target target_class="panel_type_target_class"/&gt;
+  &lt;/panel_type&gt;
+&lt;/core.feature&gt;</pre>
+        <p>
+            The key is in the interaction between the panel type and the target. Taking out
+            the irrelevant parts, we get:</p>
+        <pre>&lt;core.panel_type nrdo.id="welcome_panel_type" source_file="Core/Welcome.ascx" nrdo.find.by="source_file"&gt;<br />&nbsp; &lt;target target_class="panel_type_target_class"/&gt;<br />&lt;/core.panel_type&gt;</pre>
+        <p>
+            Which based on what has been discussed so far would transform into:</p>
+        <pre>&lt;core.access.target target_class="panel_type_target_class" nrdo.id="welcome_panel_type_target"/&gt;<br />&lt;core.panel_type nrdo.id="welcome_panel_type" source_file="Core/Welcome.ascx" nrdo.find.by="source_file" target="welcome_panel_type_target"&gt;</pre>
+<p>
+    This doesn't actually achieve the desired result, however, because it creates a
+    brand new target record rather than finding the existing one. So in the case of
+    a references-as-nested-element where the containing element has nrdo.find.by or
+    nrdo.find.where specified, the transformed code turns into this instead:</p>
+        <pre>&lt;core.panel_type nrdo.id="welcome_panel_type" source_file="Core/Welcome.ascx" nrdo.find.by="source_file" nrdo.action="none"&gt;
+&lt;core.access.target target_class="panel_type_target_class" nrdo.id="welcome_panel_type_target" nrdo.find.by="id" id=":welcome_panel_type.target_id"/&gt;
+&lt;core.panel_type nrdo.id="welcome_panel_type" source_file="Core/Welcome.ascx" target="welcome_panel_type_target"&gt;
+</pre>
+<p>
+    The actual details of how that transform needs to happen are slightly hairy, but
+    not terribly so, and they're worth implementing because they save an awful lot of
+    complexity for the end user. The nrdo.action="none" causes the first panel_type
+    record to only do the finding part, which allows the finding of the target record
+    to succeed based on that target id if the record is present, or a new one inserted
+    if not. Then finally the panel type gets inserted if it wasn't already present,
+    or updated appropriately if it was.</p>
+        <h2>
+            Transformations</h2>
+        <p>
+            The recipe engine has built in support for applying user-defined transformations
+            to the XML structure before loading it. The algorithm that is used is based on the
+            recognition that raw format recipes are simpler and more predictable and hence easier
+            to parse, but friendly format recipes are easier to write, and also to generate
+            as the output of such transformations.</p>
+        <p>
+            A transformation is defined by a transformation type and (optionally) a source file.
+            There is a built in transformation type called "xslt", for which the source file
+            is required and specifies an xslt 'stylesheet' to apply to the XML. Other transformation
+            types can be registered with the recipe engine before loading the recipe, which
+            requires specifying a name and the fully qualified classname of a class that implements
+            the ITransformRecipe interface. ITransformRecipe defines one read-write property
+            SourceFile (which will be set to the source file of the transformation if one is
+            specified) and one method, XmlDocument Transform(XmlDocument recipe). This method
+            can return either the same document passed to it, after modifying it, or create
+            a whole new document and return that. The document passed in is guaranteed to be
+            a valid raw format recipe; the returned document will be interpreted as friendly
+            format and can use the additional features available to friendly format recipes.</p>
+        <p>
+            Note: the application using recipes may support additional transformations applied
+            to xml documents before the recipe engine ever sees them. cmScribe in particular
+            will most likely do so.The recipe engine is unaware of such transformations, however,
+            and they are outside the scope of this document, except to note that obviously,
+            neither the input nor output of these transformations need be valid recipes until
+            the very last transformation is reached - so they do not meet the contract for ITransformRecipe.</p>
+        <p>
+            Transformations that the recipe engine IS aware of come from two sources. Firstly,
+            the application using the recipe engine may supply a list of transformations to
+            the engine through the engine's API. Secondly, the recipe itself may define further
+            transformations by including &lt;nrdo.transform&gt; elements. These must appear
+            at the root of the &lt;nrdo.recipe&gt; element and before any table elements occur.
+            Two attributes can be specified on &lt;nrdo.transform&gt;: type, and src. The type
+            attribute specifies the type name of any registered transformation type; if omitted,
+            it defaults to "xslt". The src attribute specifies the source file, which is required
+            for xslt but may or may not be required for other transformation types.</p>
+        <p>
+            The algorithm by which the transformations are applied is best described by talking
+            about a queue of transformations. The queue starts out containing the API-supplied
+            list of transformations, in order. The recipe is then processed as follows:</p>
+        <ol>
+            <li>Convert the document from friendly format to raw format (the code that does this
+                is not a "transformation" by the definition we're using here, but rather internal
+                code). This involves translating all nested structures to the corresponding flat
+                structures as described above, and <em>removing</em> all nrdo.transform elements.
+                The transformations specified by those elements, though, are added to the <em>front</em>
+                of the transformation queue.</li>
+            <li>If the queue is empty, stop: we're done.</li>
+            <li>Apply the transformation at the front of the queue.</li>
+            <li>The output of the transformation is considered to be friendly format. So go back
+                to step 1 to convert it to raw, and continue from there.</li>
+        </ol>
+        <p>
+            Clearly it is possible to create an infinite loop here by defining a transform that
+            keeps inserting more and more transform tags. I don't think this would be easy to
+            do accidentally, though, and a malicious recipe could already do a lot more harm
+            than that.</p>
+    </body>
+</html>

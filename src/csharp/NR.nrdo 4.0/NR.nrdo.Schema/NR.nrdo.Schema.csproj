@@ -1,0 +1,177 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{96EB9593-DC82-4DEC-9E8C-785ABADFE7AD}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>NR.nrdo.Schema</RootNamespace>
+    <AssemblyName>NR.nrdo.Schema</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>R:\nrdo2016\lib\Net40\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="ReadOnlyCollectionsInterfaces">
+      <HintPath>..\packages\ReadOnlyCollectionInterfaces.1.0.0\lib\NET40-client\ReadOnlyCollectionsInterfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Collections.Immutable.Net40">
+      <HintPath>..\packages\System.Collections.Immutable.Net40.1.0.30.17\lib\net40\System.Collections.Immutable.Net40.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Drivers\AccessSchemaDriver.cs" />
+    <Compile Include="Drivers\IndexCustomState.cs" />
+    <Compile Include="Drivers\Introspection\IntrospectedFulltextIndex.cs" />
+    <Compile Include="Drivers\Introspection\IntrospectedIndexCustomState.cs" />
+    <Compile Include="Drivers\Introspection\IntrospectedView.cs" />
+    <Compile Include="Drivers\SchemaDriver.cs" />
+    <Compile Include="Drivers\FieldCreation.cs" />
+    <Compile Include="Drivers\SchemaConnection.cs" />
+    <Compile Include="Drivers\SqlServerIndexCustomState.cs" />
+    <Compile Include="Objects\Fulltext\AddFulltextCatalogsStep.cs" />
+    <Compile Include="Objects\Fulltext\AddFulltextIndexesStep.cs" />
+    <Compile Include="Objects\Fulltext\DropFulltextCatalogsStep.cs" />
+    <Compile Include="Objects\Fulltext\DropFulltextIndexesStep.cs" />
+    <Compile Include="Objects\Fulltext\FulltextCatalogType.cs" />
+    <Compile Include="Objects\Fulltext\FulltextIndexType.cs" />
+    <Compile Include="Objects\Stateless.cs" />
+    <Compile Include="Objects\Tables\ResolvePendingReordersStep.cs" />
+    <Compile Include="Objects\Tables\FieldOrderSensitivityType.cs" />
+    <Compile Include="Objects\Tables\PendingReorderTableType.cs" />
+    <Compile Include="Objects\Tables\ReorderTableColumnsStep.cs" />
+    <Compile Include="Objects\Views\AddViewsStep.cs" />
+    <Compile Include="Objects\Views\DropViewsStep.cs" />
+    <Compile Include="Objects\Views\ViewType.cs" />
+    <Compile Include="OldVersionUpgrade\OldVersionCacheMigrationStep.cs" />
+    <Compile Include="OldVersionUpgrade\OldVersionCacheMigrationType.cs" />
+    <Compile Include="Objects\ObjectTypeHelper.cs" />
+    <Compile Include="Objects\Tables\TableRenameType.cs" />
+    <Compile Include="OldVersionUpgrade\OldVersionNrdoCache.cs" />
+    <Compile Include="OldVersionUpgrade\OldVersionUpgradeProvider.cs" />
+    <Compile Include="Providers\CodeBaseSchemaProvider.cs" />
+    <Compile Include="Providers\EssentialSchemaProvider.cs" />
+    <Compile Include="Providers\ISchemaProvider.cs" />
+    <Compile Include="Providers\IPrerequisiteSchemaProvider.cs" />
+    <Compile Include="Providers\ISchemaOverrideProvider.cs" />
+    <Compile Include="Providers\PrerequisiteSchemaProvider.cs" />
+    <Compile Include="Shared\FieldPair.cs" />
+    <Compile Include="Drivers\Introspection\IntrospectedField.cs" />
+    <Compile Include="Drivers\Introspection\IntrospectedForeignKey.cs" />
+    <Compile Include="Drivers\Introspection\IntrospectedFunction.cs" />
+    <Compile Include="Drivers\Introspection\IntrospectedIndex.cs" />
+    <Compile Include="Drivers\Introspection\IntrospectedProc.cs" />
+    <Compile Include="Drivers\Introspection\IntrospectedSchemaObject.cs" />
+    <Compile Include="Drivers\Introspection\IntrospectedSequence.cs" />
+    <Compile Include="Drivers\Introspection\IntrospectedTable.cs" />
+    <Compile Include="Drivers\Introspection\IntrospectedTrigger.cs" />
+    <Compile Include="Drivers\OracleSchemaDriver.cs" />
+    <Compile Include="Drivers\PostgresSchemaDriver.cs" />
+    <Compile Include="Drivers\SqlServerSchemaDriver.cs" />
+    <Compile Include="Objects\ObjectSet.cs" />
+    <Compile Include="Objects\Internal\CompletionType.cs" />
+    <Compile Include="PortableSql\SqlTranslator.cs" />
+    <Compile Include="PortableSql\SqlTranslatorBase.cs" />
+    <Compile Include="Objects\Fields\AddFieldsStep.cs" />
+    <Compile Include="Objects\Fkeys\AddFkeysStep.cs" />
+    <Compile Include="Objects\Indexes\AddIndexesStep.cs" />
+    <Compile Include="Objects\Sequences\AddSequencesStep.cs" />
+    <Compile Include="Objects\Queries\AddStoredProcsStep.cs" />
+    <Compile Include="Objects\Tables\AddTablesStep.cs" />
+    <Compile Include="Objects\Triggers\AddTriggersStep.cs" />
+    <Compile Include="Objects\Fields\AlterFieldsStep.cs" />
+    <Compile Include="Objects\Fields\DropChangedFieldsStep.cs" />
+    <Compile Include="Objects\Fields\DropFieldsStep.cs" />
+    <Compile Include="Objects\Fkeys\DropFkeysStep.cs" />
+    <Compile Include="Objects\Indexes\DropIndexesStep.cs" />
+    <Compile Include="Objects\Sequences\DropSequencesStep.cs" />
+    <Compile Include="Objects\Queries\DropStoredProcsStep.cs" />
+    <Compile Include="Objects\Tables\DropTablesStep.cs" />
+    <Compile Include="Objects\Triggers\DropTriggersStep.cs" />
+    <Compile Include="Objects\Queries\PreUpgradeHooksStep.cs" />
+    <Compile Include="Objects\Tables\RenameTablesStep.cs" />
+    <Compile Include="Objects\Fields\SetNotNullStep.cs" />
+    <Compile Include="Objects\Fields\SetNullStep.cs" />
+    <Compile Include="Objects\Internal\FinishingStep.cs" />
+    <Compile Include="Shared\Helpers.cs" />
+    <Compile Include="Shared\ProcParam.cs" />
+    <Compile Include="Shared\TriggerEvents.cs" />
+    <Compile Include="Shared\TriggerTiming.cs" />
+    <Compile Include="State\ObjectState.cs" />
+    <Compile Include="Objects\ObjectType.cs" />
+    <Compile Include="State\RootObjectState.cs" />
+    <Compile Include="Objects\RootObjectType.cs" />
+    <Compile Include="State\SubObjectState.cs" />
+    <Compile Include="Objects\SubObjectType.cs" />
+    <Compile Include="Objects\Indexes\IndexState.cs" />
+    <Compile Include="Objects\Tables\TableType.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Objects\Identifier.cs" />
+    <Compile Include="Objects\Internal\BeforeStatementType.cs" />
+    <Compile Include="State\DatabaseState.cs" />
+    <Compile Include="Objects\Fields\FieldType.cs" />
+    <Compile Include="Objects\Fkeys\FkeyType.cs" />
+    <Compile Include="Objects\Indexes\NonUniqueIndexType.cs" />
+    <Compile Include="Objects\Indexes\UniqueIndexType.cs" />
+    <Compile Include="Objects\Queries\PreUpgradeHookType.cs" />
+    <Compile Include="Objects\Queries\QueryType.cs" />
+    <Compile Include="Objects\Sequences\SequenceType.cs" />
+    <Compile Include="Objects\Triggers\TriggerType.cs" />
+    <Compile Include="Objects\StepBase.cs" />
+    <Compile Include="Tool\DropBehavior.cs" />
+    <Compile Include="Tool\ErrorResponse.cs" />
+    <Compile Include="Tool\SchemaChangeOptions.cs" />
+    <Compile Include="Tool\SchemaChanges.cs" />
+    <Compile Include="Tool\SchemaTool.cs" />
+    <Compile Include="State\StateStorage.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NR.nrdo.csproj">
+      <Project>{DCB1BDE0-DB21-4583-86DD-5FCF0DA6C68D}</Project>
+      <Name>NR.nrdo</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\NR.nrdo.OldVersionLoader\NR.nrdo.OldVersionLoader.csproj">
+      <Project>{64964E36-123A-4C72-A4C3-04013C55FB22}</Project>
+      <Name>NR.nrdo.OldVersionLoader</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

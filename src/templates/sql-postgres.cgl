@@ -1,0 +1,14 @@
+export {
+  declare sequenced_pkey given {hash; fname} {
+    set pkey_get [select currval('sq_$hash$_$fname$')];
+  };
+  set < ";
+  set > ";
+  import sql-common.cgl;
+  declare csharp_support {
+    set provider PgProvider;
+    set param_char :;
+    set use_positional {};
+    set IdentityType Int32;
+  };
+};
