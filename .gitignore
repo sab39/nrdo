@@ -1,0 +1,21 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs
+/src/csharp/JdbcSharp/obj
+/src/csharp/NR.nrdo 4.0/.vs/NR.nrdo/v15
+/src/csharp/NR.nrdo 4.0/bin/Debug
+/src/csharp/NR.nrdo 4.0/CacheExtractionTest/obj/x86
+/src/csharp/NR.nrdo 4.0/NR.nrdo.OldVersionLoader/bin/Debug
+/src/csharp/NR.nrdo 4.0/NR.nrdo.OldVersionLoader/obj
+/src/csharp/NR.nrdo 4.0/NR.nrdo.Schema/bin/Debug
+/src/csharp/NR.nrdo 4.0/NR.nrdo.Schema/obj
+/src/csharp/NR.nrdo 4.0/obj
+/src/csharp/NR.nrdo 4.0/SchemaToolTest/bin/Debug
+/src/csharp/NR.nrdo 4.0/SchemaToolTest/obj/x86
+/src/csharp/NrdoBuild/CMSVisualStudio/obj
+/src/csharp/NrdoBuild/obj
+/src/csharp/NrdoInstall4.0/CacheExtractor/obj/x86
+/src/csharp/NrdoInstall4.0/NrdoExtract/obj
+/src/csharp/NrdoInstall4.0/obj
