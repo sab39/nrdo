@@ -389,6 +389,11 @@ namespace NR.nrdo.Schema.Drivers
 
         #region Fulltext indexes
 
+        public virtual bool IsFulltextSupported(NrdoConnection connection)
+        {
+            return IsFulltextIndexSupported;
+        }
+
         public virtual bool IsFulltextCatalogUsed { get { return false; } }
         public virtual bool IsFulltextIndexSupported { get { return false; } }
 

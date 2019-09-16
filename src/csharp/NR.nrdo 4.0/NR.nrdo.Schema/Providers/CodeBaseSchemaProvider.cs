@@ -163,7 +163,7 @@ namespace NR.nrdo.Schema.Providers
                     }
                 }
 
-                if (nrdoTable.FulltextFields.Any())
+                if (nrdoTable.FulltextFields.Any() && connection.SchemaDriver.IsFulltextSupported(connection))
                 {
                     var catalog = nrdoTable.FulltextCatalog ?? "NrdoFulltext";
                     if (!catalogs.Contains(catalog))

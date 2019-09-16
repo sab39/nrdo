@@ -19,7 +19,6 @@ namespace NR.nrdo.Schema.Drivers
             return (int)connection.ExecuteSql("SELECT Cast(ParseName(Cast(ServerProperty('ProductVersion') As nvarchar), 4) As int) AS [sql_version]",
                                      result => result.GetInt("sql_version")).Single();
         }
-
         public override void TryAcquireSchemaUpdateLock(NrdoConnection connection)
         {
             try
@@ -103,6 +102,12 @@ namespace NR.nrdo.Schema.Drivers
 
         public override bool IsFulltextCatalogUsed { get { return true; } }
         public override bool IsFulltextIndexSupported { get { return true; } }
+
+        public override bool IsFulltextSupported(NrdoConnection connection)
+        {
+            return connection.ExecuteSql("SELECT fulltextserviceproperty('isfulltextinstalled') AS [fulltext_enabled]",
+                                        result => result.GetInt("fulltext_enabled") == 1).Single();
+        }
 
         public override string GetEnableFulltextSql(NrdoConnection connection)
         {
