@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project name="nrdo" default="all" basedir=".">
    
-	<property name="ikvm" location="..\..\..\Resources\IKVM\ikvmbin-8.1.5717.0" />
+	<property name="ikvm" location="..\..\..\..\Resources\IKVM\ikvmbin-8.1.5717.0\ikvm-8.1.5717.0" />
+	<property name="msbuild" location="C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\MSBuild\15.0\Bin" />
 
 	<property name="net4.0" location="C:\Windows\Microsoft.Net\Framework\v4.0.30319"/>
 	
@@ -33,19 +34,19 @@
 	</target>
 
 	<target name="nrdolib4.0" description="Compile the .NET 4.0 version of nrdo library">
-		<exec failonerror="true" dir="csharp\NR.nrdo 4.0" executable="${net4.0}\msbuild.exe">
+		<exec failonerror="true" dir="csharp\NR.nrdo 4.0" executable="${msbuild}\msbuild.exe">
 			<arg value="NR.nrdo.sln"/>
 			<arg value="/t:Rebuild"/>
 		</exec>
 	</target>
 	
 	<target name="nrdobuild" depends="exe" description="Compile NrdoBuild which integrates nrdo into Visual Studio (debug only)">
-		<exec failonerror="true" dir="csharp\NrdoBuild" executable="${net4.0}\msbuild.exe">
+		<exec failonerror="true" dir="csharp\NrdoBuild" executable="${msbuild}\msbuild.exe">
 			<arg value="NrdoBuild.sln"/>
 			<arg value="/p:Configuration=Debug"/>
 			<arg value="/t:Rebuild"/>
 		</exec>
-		<exec failonerror="true" dir="csharp\NrdoBuild\CMSVisualStudio" executable="${net4.0}\msbuild.exe">
+		<exec failonerror="true" dir="csharp\NrdoBuild\CMSVisualStudio" executable="${msbuild}\msbuild.exe">
 			<arg value="CMSVisualStudio.sln"/>
 			<arg value="/p:Configuration=Debug"/>
 			<arg value="/t:Rebuild"/>
@@ -53,7 +54,7 @@
 	</target>
 	
 	<target name="nrdobuild-release" depends="nrdobuild" description="Compile NrdoBuild which integrates nrdo into Visual Studio (RELEASE version - must close VS.Net)">
-		<exec failonerror="true" dir="csharp\NrdoBuild" executable="${net4.0}\msbuild.exe">
+		<exec failonerror="true" dir="csharp\NrdoBuild" executable="${msbuild}\msbuild.exe">
 			<arg value="NrdoBuild.sln"/>
 			<arg value="/p:Configuration=Release"/>
 			<arg value="/t:Rebuild"/>
