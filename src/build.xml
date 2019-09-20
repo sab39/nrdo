@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="nrdo" default="all" basedir=".">
+   
+	<property name="ikvm" location="..\..\..\Resources\IKVM\ikvmbin-8.1.5717.0" />
+
+	<property name="net4.0" location="C:\Windows\Microsoft.Net\Framework\v4.0.30319"/>
+	
+	<target name="all" depends="exe,nrdolib4.0,nrdobuild"/>
+
+	<target name="classes">
+		<mkdir dir="classes" />
+		<javac srcdir="java" destdir="classes" includeantruntime="false" includejavaruntime="true" includes="**\*.java" listfiles="true" />
+	</target>
+	
+	<target name="jar" description="Create a jar of the nrdo tools" depends="classes">
+		<jar jarfile="nrdo.jar" includes="**\*.class" basedir="classes"/>
+	</target>
+	
+	<target name="exe" description="Construct nrdo.exe" depends="jar">
+		<copy file="${ikvm}\bin\IKVM.Runtime.dll" todir="bin"/>
+		<copy file="${ikvm}\bin\IKVM.OpenJDK.Core.dll" todir="bin"/>
+		<copy file="${ikvm}\bin\IKVM.OpenJDK.Jdbc.dll" todir="bin"/>
+		<copy file="${ikvm}\bin\IKVM.OpenJDK.Util.dll" todir="bin"/>
+		<copy file="${ikvm}\bin\IKVM.OpenJDK.Text.dll" todir="bin"/>
+		<exec failonerror="true" dir="bin" executable="${ikvm}\bin\ikvmc" >
+			<arg value="-debug"/>
+			<arg value="-reference:IKVM.OpenJDK.Core.dll"/>
+			<arg value="-out:nrdo.exe"/>
+			<arg value="-target:exe"/>
+			<arg value="-main:net.netreach.nrdo.tools.NRDOTool"/>
+			<arg value="..\nrdo.jar"/>
+		</exec>
+	</target>
+
+	<target name="nrdolib4.0" description="Compile the .NET 4.0 version of nrdo library">
+		<exec failonerror="true" dir="csharp\NR.nrdo 4.0" executable="${net4.0}\msbuild.exe">
+			<arg value="NR.nrdo.sln"/>
+			<arg value="/t:Rebuild"/>
+		</exec>
+	</target>
+	
+	<target name="nrdobuild" depends="exe" description="Compile NrdoBuild which integrates nrdo into Visual Studio (debug only)">
+		<exec failonerror="true" dir="csharp\NrdoBuild" executable="${net4.0}\msbuild.exe">
+			<arg value="NrdoBuild.sln"/>
+			<arg value="/p:Configuration=Debug"/>
+			<arg value="/t:Rebuild"/>
+		</exec>
+		<exec failonerror="true" dir="csharp\NrdoBuild\CMSVisualStudio" executable="${net4.0}\msbuild.exe">
+			<arg value="CMSVisualStudio.sln"/>
+			<arg value="/p:Configuration=Debug"/>
+			<arg value="/t:Rebuild"/>
+		</exec>
+	</target>
+	
+	<target name="nrdobuild-release" depends="nrdobuild" description="Compile NrdoBuild which integrates nrdo into Visual Studio (RELEASE version - must close VS.Net)">
+		<exec failonerror="true" dir="csharp\NrdoBuild" executable="${net4.0}\msbuild.exe">
+			<arg value="NrdoBuild.sln"/>
+			<arg value="/p:Configuration=Release"/>
+			<arg value="/t:Rebuild"/>
+		</exec>
+	</target>
+</project>
