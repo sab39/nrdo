@@ -93,8 +93,9 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.SqlServer.Management.SqlParser">
-      <HintPath>..\..\..\..\..\..\Resources\SMO\SMO_201202\Microsoft.SqlServer.Management.SqlParser.dll</HintPath>
+    <Reference Include="Microsoft.SqlServer.Management.SqlParser, Version=10.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Resources\Microsoft.SqlServer.Management\v12\Microsoft.SqlServer.Management.SqlParser.dll</HintPath>
     </Reference>
     <Reference Include="ReadOnlyCollectionsInterfaces">
       <HintPath>packages\ReadOnlyCollectionInterfaces.1.0.0\lib\NET40-client\ReadOnlyCollectionsInterfaces.dll</HintPath>
