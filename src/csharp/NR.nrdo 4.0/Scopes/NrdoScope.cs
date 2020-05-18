@@ -6,6 +6,7 @@ using System.Data;
 using System.Configuration;
 using NR.nrdo.Scopes;
 using NR.nrdo.Connection;
+using NR.nrdo.Stats;
 
 namespace NR.nrdo
 {
@@ -54,7 +55,7 @@ namespace NR.nrdo
             if (top == null)
             {
                 top = this;
-                Nrdo.UpdateGlobalStats(stats => stats.WithScopeStart());
+                NrdoStats.UpdateGlobalStats(stats => stats.WithScopeStart());
             }
         }
 
@@ -100,7 +101,7 @@ namespace NR.nrdo
             if (disposed) throw new InvalidCastException("Cannot get a connection from a disposed scope");
             if (conn == null)
             {
-                Nrdo.UpdateGlobalStats(stats => stats.WithConnectionStart());
+                NrdoStats.UpdateGlobalStats(stats => stats.WithConnectionStart());
                 conn = NrdoConnection.Create(dataBase);
             }
             return conn;

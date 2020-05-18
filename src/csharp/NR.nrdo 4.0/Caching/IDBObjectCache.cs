@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using NR.nrdo.Stats;
 using NR.nrdo.Util;
 
 namespace NR.nrdo.Caching

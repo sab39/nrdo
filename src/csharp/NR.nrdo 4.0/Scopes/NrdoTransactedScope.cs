@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Data;
 using NR.nrdo.Scopes;
+using NR.nrdo.Stats;
 
 namespace NR.nrdo
 {
@@ -133,7 +134,7 @@ namespace NR.nrdo
             if (topTransacted == null) throw new InvalidOperationException("Cannot begin a transaction when no transacted scope is present.");
             if (ScopeInfo.Current.GetDbScopeInfo(dataBase).tx == null)
             {
-                Nrdo.UpdateGlobalStats(stats => stats.WithTransactionStart());
+                NrdoStats.UpdateGlobalStats(stats => stats.WithTransactionStart());
                 ScopeInfo.Current.GetDbScopeInfo(dataBase).tx = topTransacted.GetConnection().Connection.BeginTransaction();
             }
         }

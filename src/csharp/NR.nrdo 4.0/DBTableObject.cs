@@ -7,6 +7,8 @@ using NR.nrdo.Util;
 using System.Reflection;
 using NR.nrdo.Caching;
 using NR.nrdo.Connection;
+using NR.nrdo.Stats;
+using System.Diagnostics;
 
 namespace NR.nrdo
 {
@@ -115,7 +117,7 @@ namespace NR.nrdo
             // If we can skip it, skip it
             if (!IsNew && IsUnchanged)
             {
-                Nrdo.DebugLog("db-update-skipped", typeof(T).FullName, "Update", null);
+                Nrdo.DebugLog(() => Nrdo.DebugArgs("db-update-skipped", typeof(T).FullName, "Update", null));
                 return;
             }
 
@@ -127,7 +129,7 @@ namespace NR.nrdo
             try
             {
                 // Insert or update in the database.
-                var start = DateTime.Now;
+                var stopwatch = Stopwatch.StartNew();
                 string cmdText = IsNew ? InsertStatement : UpdateStatement;
                 if (cmdText != null)
                 {
@@ -142,8 +144,9 @@ namespace NR.nrdo
                         if (IsNew) getPkeyFromSeq(scope);
                         isNew = false;
                     }
-                    Nrdo.DebugLog(start, wasNew ? "db-insert" : "db-update", typeof(T).FullName, "Update", null);
-                    Nrdo.UpdateGlobalStats(stats => stats.WithModification(DateTime.Now - start));
+                    stopwatch.Stop();
+                    Nrdo.DebugLog(() => Nrdo.DebugArgs(stopwatch, wasNew ? "db-insert" : "db-update", typeof(T).FullName, "Update", null));
+                    NrdoStats.UpdateGlobalStats(stats => stats.WithModification(stopwatch.Elapsed));
                 }
             }
             catch
@@ -194,15 +197,16 @@ namespace NR.nrdo
             try
             {
                 // Delete from the database.
-                var start = DateTime.Now;
+                var stopwatch = Stopwatch.StartNew();
                 NrdoTransactedScope.MaybeBeginTransaction(DataBase);
                 using (var scope = new NrdoScope(DataBase))
                 {
                     scope.ExecuteSql(DeleteStatement, setPkeyOnCmd);
                 }
                 isNew = true;
-                Nrdo.DebugLog(start, "db-delete", typeof(T).FullName, "Delete", null);
-                Nrdo.UpdateGlobalStats(stats => stats.WithModification(DateTime.Now - start));
+                stopwatch.Stop();
+                Nrdo.DebugLog(() => Nrdo.DebugArgs(stopwatch, "db-delete", typeof(T).FullName, "Delete", null));
+                NrdoStats.UpdateGlobalStats(stats => stats.WithModification(stopwatch.Elapsed));
             }
             catch
             {

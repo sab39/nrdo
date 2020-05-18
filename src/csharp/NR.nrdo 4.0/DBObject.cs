@@ -8,6 +8,8 @@ using System.Reflection;
 using NR.nrdo.Caching;
 using System.Linq;
 using NR.nrdo.Connection;
+using NR.nrdo.Stats;
+using System.Diagnostics;
 
 namespace NR.nrdo
 {
@@ -34,9 +36,9 @@ namespace NR.nrdo
         {
             log(null, eventType, where);
         }
-        protected static void log(DateTime? startTime, string eventType, Where<T> where)
+        protected static void log(Stopwatch stopwatch, string eventType, Where<T> where)
         {
-            Nrdo.DebugLog(startTime, eventType, typeof(T).FullName, where.GetMethodName.Substring(where.GetMethodName.LastIndexOf('.') + 1), where.GetParameters);
+            Nrdo.DebugLog(() => Nrdo.DebugArgs(stopwatch, eventType, typeof(T).FullName, where.GetMethodName.Substring(where.GetMethodName.LastIndexOf('.') + 1), where.GetParameters));
         }
 
         protected internal virtual T FieldwiseClone()
@@ -52,7 +54,7 @@ namespace NR.nrdo
         }
         protected static void getVoid(DataBase dataBase, Where<T> where)
         {
-            var start = DateTime.Now;
+            var stopwatch = Stopwatch.StartNew();
             try
             {
                 using (var scope = new NrdoScope(dataBase))
@@ -62,8 +64,9 @@ namespace NR.nrdo
             }
             finally
             {
-                Nrdo.UpdateGlobalStats(stats => stats.WithModification(DateTime.Now - start));
-                log(start, "db-hit-void", where);
+                stopwatch.Stop();
+                NrdoStats.UpdateGlobalStats(stats => stats.WithModification(stopwatch.Elapsed));
+                log(stopwatch, "db-hit-void", where);
             }
         }
 
@@ -76,7 +79,7 @@ namespace NR.nrdo
 
         protected static T getSingle(Where<T> where)
         {
-            var beforeTime = DateTime.Now;
+            var stopwatch = Stopwatch.StartNew();
             if (where.Cache == null)
             {
                 try
@@ -85,7 +88,8 @@ namespace NR.nrdo
                 }
                 finally
                 {
-                    Nrdo.UpdateGlobalStats(stats => stats.WithCacheSkip(DateTime.Now - beforeTime));
+                    stopwatch.Stop();
+                    NrdoStats.UpdateGlobalStats(stats => stats.WithCacheSkip(stopwatch.Elapsed));
                 }
             }
 
@@ -100,6 +104,7 @@ namespace NR.nrdo
                 {
                     where.Cache.HitInfo.updateStats(stats => stats.WithCacheHit(), stats => stats.WithSingleCacheHit());
                     log("cache-hit-single", where);
+                    stopwatch.Stop();
                     return cacheResult == null ? null : cacheResult.FieldwiseClone();
                 }
                 modCountHash = cache.ModificationCountHash;
@@ -126,8 +131,8 @@ namespace NR.nrdo
                 // on caches.
                 lock (Nrdo.LockObj)
                 {
-                    var duration = DateTime.Now - beforeTime;
-                    where.Cache.HitInfo.updateStats(stats => stats.WithCacheMiss(duration), stats => stats.WithSingleCacheNonHit(duration, where.Cache.IsOverflowing));
+                    stopwatch.Stop();
+                    where.Cache.HitInfo.updateStats(stats => stats.WithCacheMiss(stopwatch.Elapsed), stats => stats.WithSingleCacheNonHit(stopwatch.Elapsed, where.Cache.IsOverflowing));
                 }
             }
         }
@@ -141,7 +146,7 @@ namespace NR.nrdo
 
         private static T doGetSingle(DataBase dataBase, Where<T> where)
         {
-            var start = DateTime.Now;
+            var stopwatch = Stopwatch.StartNew();
             try
             {
                 using (var scope = new NrdoScope(dataBase))
@@ -151,7 +156,7 @@ namespace NR.nrdo
             }
             finally
             {
-                log(start, "db-hit-single", where);
+                log(stopwatch, "db-hit-single", where);
             }
         }
 
@@ -166,7 +171,7 @@ namespace NR.nrdo
         protected internal static List<T> getMulti<TWhere>(TWhere where)
             where TWhere : Where<T>
         {
-            var beforeTime = DateTime.Now;
+            var stopwatch = Stopwatch.StartNew();
 
             if (where.Cache == null)
             {
@@ -176,7 +181,8 @@ namespace NR.nrdo
                 }
                 finally
                 {
-                    Nrdo.UpdateGlobalStats(stats => stats.WithCacheSkip(DateTime.Now - beforeTime));
+                    stopwatch.Stop();
+                    NrdoStats.UpdateGlobalStats(stats => stats.WithCacheSkip(stopwatch.Elapsed));
                 }
             }
 
@@ -191,6 +197,7 @@ namespace NR.nrdo
                 {
                     where.Cache.HitInfo.updateStats(stats => stats.WithCacheHit(), stats => stats.WithListCacheHit(cacheResult.Count));
                     log("cache-hit-multi", where);
+                    stopwatch.Stop();
                     return (from t in cacheResult select t.FieldwiseClone()).ToList();
                 }
                 modCountHash = cache.ModificationCountHash;
@@ -227,21 +234,21 @@ namespace NR.nrdo
                 // on caches.
                 lock (Nrdo.LockObj)
                 {
-                    var duration = DateTime.Now - beforeTime;
+                    stopwatch.Stop();
                     if (skipped)
                     {
-                        where.Cache.HitInfo.updateStats(stats => stats.WithCacheSkip(duration), stats => stats.WithListCacheSkip(resultCount, duration));
+                        where.Cache.HitInfo.updateStats(stats => stats.WithCacheSkip(stopwatch.Elapsed), stats => stats.WithListCacheSkip(resultCount, stopwatch.Elapsed));
                     }
                     else
                     {
-                        where.Cache.HitInfo.updateStats(stats => stats.WithCacheMiss(duration), stats => stats.WithListCacheMiss(resultCount, duration, where.Cache.IsOverflowing));
+                        where.Cache.HitInfo.updateStats(stats => stats.WithCacheMiss(stopwatch.Elapsed), stats => stats.WithListCacheMiss(resultCount, stopwatch.Elapsed, where.Cache.IsOverflowing));
                     }
                 }
             }
         }
         protected static List<T> doGetMulti(DataBase dataBase, Where<T> where)
         {
-            var start = DateTime.Now;
+            var stopwatch = Stopwatch.StartNew();
             try
             {
                 using (var scope = new NrdoScope(dataBase))
@@ -251,7 +258,7 @@ namespace NR.nrdo
             }
             finally
             {
-                log(start, "db-hit-multi", where);
+                log(stopwatch, "db-hit-multi", where);
             }
         }
     }
