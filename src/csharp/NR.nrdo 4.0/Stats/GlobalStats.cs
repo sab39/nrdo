@@ -18,210 +18,246 @@ namespace NR.nrdo.Stats
             this.LatestOperationStamp = TimeSpan.Zero;
         }
 
-        private GlobalStats(TimeSpan startStamp, TimeSpan latestOperationStamp, long cacheHitsTotal, long cacheMissesTotal, long cacheSkippedTotal, long totalModifications, TimeSpan totalQueryTime, TimeSpan totalModificationTime, long cumulativeCost, long scopeStarts, long connectionStarts, long transactionStarts)
+        private GlobalStats(TimeSpan startStamp, TimeSpan latestOperationStamp,
+            long cacheHitsTotal, long cacheMissesTotal, long cacheSkippedTotal, long totalModifications, long totalFailures,
+            TimeSpan totalQueryTime, TimeSpan totalModificationTime, TimeSpan totalFailureTime,
+            long cumulativeCost, long scopeStarts, long connectionStarts, long transactionStarts)
         {
             this.StartStamp = startStamp;
             this.LatestOperationStamp = latestOperationStamp;
-            this.cacheHitsTotal = cacheHitsTotal;
-            this.cacheMissesTotal = cacheMissesTotal;
-            this.cacheSkippedTotal = cacheSkippedTotal;
-            this.totalModifications = totalModifications;
-            this.totalQueryTime = totalQueryTime;
-            this.totalModificationTime = totalModificationTime;
-            this.cumulativeCost = cumulativeCost;
-            this.scopeStarts = scopeStarts;
-            this.connectionStarts = connectionStarts;
-            this.transactionStarts = transactionStarts;
+            this.CacheHitsTotal = cacheHitsTotal;
+            this.CacheMissesTotal = cacheMissesTotal;
+            this.CacheSkippedTotal = cacheSkippedTotal;
+            this.TotalModifications = totalModifications;
+            this.TotalFailures = totalFailures;
+            this.TotalQueryTime = totalQueryTime;
+            this.TotalModificationTime = totalModificationTime;
+            this.TotalFailureTime = totalFailureTime;
+            this.CumulativeCost = cumulativeCost;
+            this.ScopeStarts = scopeStarts;
+            this.ConnectionStarts = connectionStarts;
+            this.TransactionStarts = transactionStarts;
         }
 
         public TimeSpan StartStamp { get; }
         public TimeSpan LatestOperationStamp { get; }
 
-        private readonly long cacheHitsTotal;
-        public long CacheHitsTotal { get { return cacheHitsTotal; } }
+        public long CacheHitsTotal { get; }
 
-        private readonly long cacheMissesTotal;
-        public long CacheMissesTotal { get { return cacheMissesTotal; } }
+        public long CacheMissesTotal { get; }
 
-        private readonly long cacheSkippedTotal;
-        public long CacheSkippedTotal { get { return cacheSkippedTotal; } }
+        public long CacheSkippedTotal { get; }
 
-        public long TotalQueries { get { return CacheHitsTotal + CacheMissesTotal + CacheSkippedTotal; } }
-        public long CacheNonHitsTotal { get { return CacheMissesTotal + CacheSkippedTotal; } }
+        public long TotalQueries => CacheHitsTotal + CacheMissesTotal + CacheSkippedTotal;
+        public long CacheNonHitsTotal => CacheMissesTotal + CacheSkippedTotal;
 
-        private readonly long totalModifications;
-        public long TotalModifications { get { return totalModifications; } }
+        public long TotalModifications { get; }
 
-        public long TotalOperations { get { return TotalQueries + TotalModifications; } }
+        public long TotalFailures { get; }
 
-        private readonly TimeSpan totalQueryTime; // DB hits only; cache hits are presumed instantaneous
-        public TimeSpan TotalQueryTime { get { return totalQueryTime; } }
+        public long TotalOperations => TotalQueries + TotalModifications + TotalFailures;
 
-        private readonly TimeSpan totalModificationTime;
-        public TimeSpan TotalModificationTime { get { return totalModificationTime; } }
+        public TimeSpan TotalQueryTime { get; } // DB hits only; cache hits are presumed instantaneous
 
-        public TimeSpan TotalDBTime { get { return TotalQueryTime + TotalModificationTime; } }
+        public TimeSpan TotalModificationTime { get; }
 
-        private readonly long cumulativeCost;
-        public long CumulativeCost { get { return cumulativeCost; } }
+        public TimeSpan TotalFailureTime { get; }
 
-        private readonly long scopeStarts;
-        public long ScopeStarts { get { return scopeStarts; } }
+        public TimeSpan TotalDBTime => TotalQueryTime + TotalModificationTime + TotalFailureTime;
 
-        private readonly long connectionStarts;
-        public long ConnectionStarts { get { return connectionStarts; } }
+        public long CumulativeCost { get; }
 
-        private readonly long transactionStarts;
-        public long TransactionStarts { get { return transactionStarts; } }
+        public long ScopeStarts { get; }
+
+        public long ConnectionStarts { get; }
+
+        public long TransactionStarts { get; }
 
         public GlobalStats WithCacheHit()
         {
             return new GlobalStats(StartStamp, NowStamp,
-                cacheHitsTotal + 1, // New value
-                cacheMissesTotal,
-                cacheSkippedTotal,
-                totalModifications,
-                totalQueryTime,
-                totalModificationTime,
-                cumulativeCost,
-                scopeStarts,
-                connectionStarts,
-                transactionStarts);
+                CacheHitsTotal + 1, // New value
+                CacheMissesTotal,
+                CacheSkippedTotal,
+                TotalModifications,
+                TotalFailures,
+                TotalQueryTime,
+                TotalModificationTime,
+                TotalFailureTime,
+                CumulativeCost,
+                ScopeStarts,
+                ConnectionStarts,
+                TransactionStarts);
         }
 
         public GlobalStats WithCacheMiss(TimeSpan queryTime)
         {
             return new GlobalStats(StartStamp, NowStamp,
-                cacheHitsTotal,
-                cacheMissesTotal + 1, // New value
-                cacheSkippedTotal,
-                totalModifications,
-                totalQueryTime + NrdoStats.nonZeroTime(queryTime), // New value
-                totalModificationTime,
-                cumulativeCost,
-                scopeStarts,
-                connectionStarts,
-                transactionStarts);
+                CacheHitsTotal,
+                CacheMissesTotal + 1, // New value
+                CacheSkippedTotal,
+                TotalModifications,
+                TotalFailures,
+                TotalQueryTime + NrdoStats.nonZeroTime(queryTime), // New value
+                TotalModificationTime,
+                TotalFailureTime,
+                CumulativeCost,
+                ScopeStarts,
+                ConnectionStarts,
+                TransactionStarts);
         }
 
         public GlobalStats WithCacheSkip(TimeSpan queryTime)
         {
             return new GlobalStats(StartStamp, NowStamp,
-                cacheHitsTotal,
-                cacheMissesTotal,
-                cacheSkippedTotal + 1, // New value
-                totalModifications,
-                totalQueryTime + NrdoStats.nonZeroTime(queryTime), // New value
-                totalModificationTime,
-                cumulativeCost,
-                scopeStarts,
-                connectionStarts,
-                transactionStarts);
+                CacheHitsTotal,
+                CacheMissesTotal,
+                CacheSkippedTotal + 1, // New value
+                TotalModifications,
+                TotalFailures,
+                TotalQueryTime + NrdoStats.nonZeroTime(queryTime), // New value
+                TotalModificationTime,
+                TotalFailureTime,
+                CumulativeCost,
+                ScopeStarts,
+                ConnectionStarts,
+                TransactionStarts);
         }
 
         public GlobalStats WithModification(TimeSpan modTime)
         {
             return new GlobalStats(StartStamp, NowStamp,
-                cacheHitsTotal,
-                cacheMissesTotal,
-                cacheSkippedTotal,
-                totalModifications + 1, // New value
-                totalQueryTime,
-                totalModificationTime + NrdoStats.nonZeroTime(modTime), // New value
-                cumulativeCost,
-                scopeStarts,
-                connectionStarts,
-                transactionStarts);
+                CacheHitsTotal,
+                CacheMissesTotal,
+                CacheSkippedTotal,
+                TotalModifications + 1, // New value
+                TotalFailures,
+                TotalQueryTime,
+                TotalModificationTime + NrdoStats.nonZeroTime(modTime), // New value
+                TotalFailureTime,
+                CumulativeCost,
+                ScopeStarts,
+                ConnectionStarts,
+                TransactionStarts);
+        }
+
+        public GlobalStats WithFailure(TimeSpan failTime)
+        {
+            return new GlobalStats(StartStamp, NowStamp,
+                CacheHitsTotal,
+                CacheMissesTotal,
+                CacheSkippedTotal,
+                TotalModifications,
+                TotalFailures + 1, // New value
+                TotalQueryTime,
+                TotalModificationTime,
+                TotalFailureTime + NrdoStats.nonZeroTime(failTime), // New value
+                CumulativeCost,
+                ScopeStarts,
+                ConnectionStarts,
+                TransactionStarts);
         }
 
         public GlobalStats WithCycleCost(long cost)
         {
             return new GlobalStats(StartStamp, NowStamp,
-                cacheHitsTotal,
-                cacheMissesTotal,
-                cacheSkippedTotal,
-                totalModifications,
-                totalQueryTime,
-                totalModificationTime,
-                cumulativeCost + cost, // new value
-                scopeStarts,
-                connectionStarts,
-                transactionStarts);
+                CacheHitsTotal,
+                CacheMissesTotal,
+                CacheSkippedTotal,
+                TotalModifications,
+                TotalFailures,
+                TotalQueryTime,
+                TotalModificationTime,
+                TotalFailureTime,
+                CumulativeCost + cost, // new value
+                ScopeStarts,
+                ConnectionStarts,
+                TransactionStarts);
         }
 
         public GlobalStats WithScopeStart()
         {
             return new GlobalStats(StartStamp, NowStamp,
-                cacheHitsTotal,
-                cacheMissesTotal,
-                cacheSkippedTotal,
-                totalModifications,
-                totalQueryTime,
-                totalModificationTime,
-                cumulativeCost,
-                scopeStarts + 1, // new value
-                connectionStarts,
-                transactionStarts);
+                CacheHitsTotal,
+                CacheMissesTotal,
+                CacheSkippedTotal,
+                TotalModifications,
+                TotalFailures,
+                TotalQueryTime,
+                TotalModificationTime,
+                TotalFailureTime,
+                CumulativeCost,
+                ScopeStarts + 1, // new value
+                ConnectionStarts,
+                TransactionStarts);
         }
 
         public GlobalStats WithConnectionStart()
         {
             return new GlobalStats(StartStamp, NowStamp,
-                cacheHitsTotal,
-                cacheMissesTotal,
-                cacheSkippedTotal,
-                totalModifications,
-                totalQueryTime,
-                totalModificationTime,
-                cumulativeCost,
-                scopeStarts,
-                connectionStarts + 1, // new value
-                transactionStarts);
+                CacheHitsTotal,
+                CacheMissesTotal,
+                CacheSkippedTotal,
+                TotalModifications,
+                TotalFailures,
+                TotalQueryTime,
+                TotalModificationTime,
+                TotalFailureTime,
+                CumulativeCost,
+                ScopeStarts,
+                ConnectionStarts + 1, // new value
+                TransactionStarts);
         }
 
         public GlobalStats WithTransactionStart()
         {
             return new GlobalStats(StartStamp, NowStamp,
-                cacheHitsTotal,
-                cacheMissesTotal,
-                cacheSkippedTotal,
-                totalModifications,
-                totalQueryTime,
-                totalModificationTime,
-                cumulativeCost,
-                scopeStarts,
-                connectionStarts,
-                transactionStarts + 1); // new value
+                CacheHitsTotal,
+                CacheMissesTotal,
+                CacheSkippedTotal,
+                TotalModifications,
+                TotalFailures,
+                TotalQueryTime,
+                TotalModificationTime,
+                TotalFailureTime,
+                CumulativeCost,
+                ScopeStarts,
+                ConnectionStarts,
+                TransactionStarts + 1); // new value
         }
 
         public GlobalStats Since(GlobalStats prior)
         {
             return new GlobalStats(prior.LatestOperationStamp, LatestOperationStamp,
-                cacheHitsTotal - prior.cacheHitsTotal,
-                cacheMissesTotal - prior.cacheMissesTotal,
-                cacheSkippedTotal - prior.cacheSkippedTotal,
-                totalModifications - prior.totalModifications,
-                totalQueryTime - prior.totalQueryTime,
-                totalModificationTime - prior.totalModificationTime,
-                cumulativeCost - prior.cumulativeCost,
-                scopeStarts - prior.scopeStarts,
-                connectionStarts - prior.connectionStarts,
-                transactionStarts - prior.transactionStarts);
+                CacheHitsTotal - prior.CacheHitsTotal,
+                CacheMissesTotal - prior.CacheMissesTotal,
+                CacheSkippedTotal - prior.CacheSkippedTotal,
+                TotalModifications - prior.TotalModifications,
+                TotalFailures - prior.TotalFailures,
+                TotalQueryTime - prior.TotalQueryTime,
+                TotalModificationTime - prior.TotalModificationTime,
+                TotalFailureTime - prior.TotalFailureTime,
+                CumulativeCost - prior.CumulativeCost,
+                ScopeStarts - prior.ScopeStarts,
+                ConnectionStarts - prior.ConnectionStarts,
+                TransactionStarts - prior.TransactionStarts);
         }
 
         public GlobalStats ToNow()
         {
             return new GlobalStats(StartStamp, NowStamp,
-                cacheHitsTotal,
-                cacheMissesTotal,
-                cacheSkippedTotal,
-                totalModifications,
-                totalQueryTime,
-                totalModificationTime,
-                cumulativeCost,
-                scopeStarts,
-                connectionStarts,
-                transactionStarts);
+                CacheHitsTotal,
+                CacheMissesTotal,
+                CacheSkippedTotal,
+                TotalModifications,
+                TotalFailures,
+                TotalQueryTime,
+                TotalModificationTime,
+                TotalFailureTime,
+                CumulativeCost,
+                ScopeStarts,
+                ConnectionStarts,
+                TransactionStarts);
         }
     }
 }

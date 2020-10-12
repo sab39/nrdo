@@ -9,6 +9,7 @@ using NR.nrdo.Caching;
 using System.Linq;
 using NR.nrdo.Stats;
 using System.Diagnostics;
+using System.Collections.Immutable;
 
 namespace NR.nrdo
 {
@@ -40,12 +41,9 @@ namespace NR.nrdo
             where TWhere : CachingWhereBase<T, TWhere, TCache>
             where TCache : DBObjectCacheBase<T, TWhere, TCache>
         {
-            lock (LockObj)
-            {
-                caches.Add(cache);
-            }
+            caches = caches.Add(cache);
         }
-        private static List<IDBObjectCache> caches = new List<IDBObjectCache>();
+        private static ImmutableList<IDBObjectCache> caches = ImmutableList<IDBObjectCache>.Empty;
 
         public static event Action FullCacheFlush;
 
@@ -60,28 +58,27 @@ namespace NR.nrdo
 
         public static IEnumerable<CacheHitInfo> GetCacheHitInfo()
         {
+            // Lock still needed even though 'caches' is an immutable list because the cache objects themselves are mutable so there would be race conditions in the sorting
             lock (LockObj)
             {
-                return (from cache in caches
-                        orderby cache.HitInfo
-                        select cache.HitInfo).ToList();
+                return ImmutableList.CreateRange(from cache in caches
+                                                 orderby cache.HitInfo
+                                                 select cache.HitInfo);
             }
         }
 
         public static IEnumerable<CacheHitInfo> GetCacheHitInfoUnsorted()
         {
+            // Lock still needed even though 'caches' is an immutable list because the cache objects themselves are mutable so there would be race conditions in the sorting
             lock (LockObj)
             {
-                return (from cache in caches
-                        where cache.IsEnabled
-                        select cache.HitInfo).ToList();
+                return ImmutableList.CreateRange(from cache in caches
+                                                 where cache.IsEnabled
+                                                 select cache.HitInfo);
             }
         }
 
-        public static int CountCaches()
-        {
-            lock (LockObj) { return caches.Count; }
-        }
+        public static int CountCaches() => caches.Count;
 
         private static event DebugPrinter oldDebug;
         public static event DebugPrinter Debug

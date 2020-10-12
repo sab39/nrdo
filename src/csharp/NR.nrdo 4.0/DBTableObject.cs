@@ -97,6 +97,10 @@ namespace NR.nrdo
             return GetPkeyHashCode();
         }
 
+        private static Lazy<IDBObjectCache<T>> insertionCache = new Lazy<IDBObjectCache<T>>(() => new DBObjectModificationCache<T>("Insert"));
+        private static Lazy<IDBObjectCache<T>> updateCache = new Lazy<IDBObjectCache<T>>(() => new DBObjectModificationCache<T>("Update"));
+        private static Lazy<IDBObjectCache<T>> deletionCache = new Lazy<IDBObjectCache<T>>(() => new DBObjectModificationCache<T>("Delete"));
+
         public virtual T Updated()
         {
             Update();
@@ -126,10 +130,11 @@ namespace NR.nrdo
 
             // Make the database change. If an exception is thrown, FullFlush then rethrow it.
             var wasNew = IsNew;
+            var stopwatch = Stopwatch.StartNew();
+            bool succeeded = false;
             try
             {
                 // Insert or update in the database.
-                var stopwatch = Stopwatch.StartNew();
                 string cmdText = IsNew ? InsertStatement : UpdateStatement;
                 if (cmdText != null)
                 {
@@ -143,16 +148,29 @@ namespace NR.nrdo
                         });
                         if (IsNew) getPkeyFromSeq(scope);
                         isNew = false;
+                        succeeded = true;
                     }
-                    stopwatch.Stop();
-                    Nrdo.DebugLog(() => Nrdo.DebugArgs(stopwatch, wasNew ? "db-insert" : "db-update", typeof(T).FullName, "Update", null));
-                    NrdoStats.UpdateGlobalStats(stats => stats.WithModification(stopwatch.Elapsed));
                 }
             }
             catch
             {
                 DataModification.RaiseFullFlush();
                 throw;
+            }
+            finally
+            {
+                stopwatch.Stop();
+                Nrdo.DebugLog(() => Nrdo.DebugArgs(stopwatch, wasNew ? "db-insert" : "db-update", typeof(T).FullName, "Update", null));
+
+                var cache = wasNew ? insertionCache.Value : updateCache.Value;
+                if (!succeeded)
+                {
+                    cache.HitInfo.updateStats(stats => stats.WithFailure(stopwatch.Elapsed), stats => stats.WithFailure(stopwatch.Elapsed));
+                }
+                else
+                {
+                    cache.HitInfo.updateStats(stats => stats.WithModification(stopwatch.Elapsed), stats => stats.WithSingleCacheNonHit(stopwatch.Elapsed, false));
+                }
             }
 
             // Lock again. If the modification count is not equal to what it was, FullFlush. Otherwise raise
@@ -193,25 +211,38 @@ namespace NR.nrdo
             // Store a pre-deletion copy. This will be used in the modification events so that the Id can be captured by code that isn't in this table.
             var preDelete = this.FieldwiseClone();
 
+            var stopwatch = Stopwatch.StartNew();
+            var succeeded = false;
+
             // Make the database change. If an exception is thrown, FullFlush then rethrow it.
             try
             {
                 // Delete from the database.
-                var stopwatch = Stopwatch.StartNew();
                 NrdoTransactedScope.MaybeBeginTransaction(DataBase);
                 using (var scope = new NrdoScope(DataBase))
                 {
                     scope.ExecuteSql(DeleteStatement, setPkeyOnCmd);
                 }
                 isNew = true;
-                stopwatch.Stop();
-                Nrdo.DebugLog(() => Nrdo.DebugArgs(stopwatch, "db-delete", typeof(T).FullName, "Delete", null));
-                NrdoStats.UpdateGlobalStats(stats => stats.WithModification(stopwatch.Elapsed));
+                succeeded = true;
             }
             catch
             {
                 DataModification.RaiseFullFlush();
                 throw;
+            }
+            finally
+            {
+                stopwatch.Stop();
+                Nrdo.DebugLog(() => Nrdo.DebugArgs(stopwatch, "db-delete", typeof(T).FullName, "Delete", null));
+                if (!succeeded)
+                {
+                    deletionCache.Value.HitInfo.updateStats(stats => stats.WithFailure(stopwatch.Elapsed), stats => stats.WithFailure(stopwatch.Elapsed));
+                }
+                else
+                {
+                    deletionCache.Value.HitInfo.updateStats(stats => stats.WithModification(stopwatch.Elapsed), stats => stats.WithSingleCacheNonHit(stopwatch.Elapsed, false));
+                }
             }
 
             // Lock again. If the modification count is not equal to what it was, FullFlush. Otherwise raise

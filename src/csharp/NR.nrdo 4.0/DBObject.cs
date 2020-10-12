@@ -80,16 +80,19 @@ namespace NR.nrdo
         protected static T getSingle(Where<T> where)
         {
             var stopwatch = Stopwatch.StartNew();
+            bool succeeded = false;
             if (where.Cache == null)
             {
                 try
                 {
-                    return doGetSingle(DataBase, where);
+                    var result = doGetSingle(DataBase, where);
+                    succeeded = true;
+                    return result;
                 }
                 finally
                 {
                     stopwatch.Stop();
-                    NrdoStats.UpdateGlobalStats(stats => stats.WithCacheSkip(stopwatch.Elapsed));
+                    NrdoStats.UpdateGlobalStats(stats => succeeded ? stats.WithCacheSkip(stopwatch.Elapsed) : stats.WithFailure(stopwatch.Elapsed));
                 }
             }
 
@@ -113,6 +116,7 @@ namespace NR.nrdo
             try
             {
                 var result = doGetSingle(DataBase, where);
+                succeeded = true;
                 lock (Nrdo.LockObj)
                 {
                     // Check the cache's ModificationCountHash. If it equals the saved value, store the value. Otherwise don't.
@@ -127,12 +131,17 @@ namespace NR.nrdo
             }
             finally
             {
-                // We don't want to miss operations that error or time out while calculating how much resources are being used
-                // on caches.
                 lock (Nrdo.LockObj)
                 {
                     stopwatch.Stop();
-                    where.Cache.HitInfo.updateStats(stats => stats.WithCacheMiss(stopwatch.Elapsed), stats => stats.WithSingleCacheNonHit(stopwatch.Elapsed, where.Cache.IsOverflowing));
+                    if (!succeeded)
+                    {
+                        where.Cache.HitInfo.updateStats(stats => stats.WithFailure(stopwatch.Elapsed), stats => stats.WithFailure(stopwatch.Elapsed));
+                    }
+                    else
+                    {
+                        where.Cache.HitInfo.updateStats(stats => stats.WithCacheMiss(stopwatch.Elapsed), stats => stats.WithSingleCacheNonHit(stopwatch.Elapsed, where.Cache.IsOverflowing));
+                    }
                 }
             }
         }
@@ -173,16 +182,19 @@ namespace NR.nrdo
         {
             var stopwatch = Stopwatch.StartNew();
 
+            bool succeeded = false;
             if (where.Cache == null)
             {
                 try
                 {
-                    return doGetMulti(DataBase, where);
+                    var result = doGetMulti(DataBase, where);
+                    succeeded = true;
+                    return result;
                 }
                 finally
                 {
                     stopwatch.Stop();
-                    NrdoStats.UpdateGlobalStats(stats => stats.WithCacheSkip(stopwatch.Elapsed));
+                    NrdoStats.UpdateGlobalStats(stats => succeeded ? stats.WithCacheSkip(stopwatch.Elapsed) : stats.WithFailure(stopwatch.Elapsed));
                 }
             }
 
@@ -208,6 +220,7 @@ namespace NR.nrdo
             try
             {
                 var result = doGetMulti(DataBase, where);
+                succeeded = true;
                 resultCount = result.Count;
                 lock (Nrdo.LockObj)
                 {
@@ -230,12 +243,14 @@ namespace NR.nrdo
             }
             finally
             {
-                // We don't want to miss operations that error or time out while calculating how much resources are being used
-                // on caches.
                 lock (Nrdo.LockObj)
                 {
                     stopwatch.Stop();
-                    if (skipped)
+                    if (!succeeded)
+                    {
+                        where.Cache.HitInfo.updateStats(stats => stats.WithFailure(stopwatch.Elapsed), stats => stats.WithFailure(stopwatch.Elapsed));
+                    }
+                    else if (skipped)
                     {
                         where.Cache.HitInfo.updateStats(stats => stats.WithCacheSkip(stopwatch.Elapsed), stats => stats.WithListCacheSkip(resultCount, stopwatch.Elapsed));
                     }

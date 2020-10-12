@@ -124,6 +124,7 @@
     <Compile Include="Caching\CachingWhereBase.cs" />
     <Compile Include="Caching\DBMultiObjectCache.cs" />
     <Compile Include="Caching\DBObjectCacheBase.cs" />
+    <Compile Include="Caching\DBObjectModificationCache.cs" />
     <Compile Include="Caching\DBSingleObjectCache.cs" />
     <Compile Include="Caching\IDBMultiObjectCache.cs" />
     <Compile Include="Caching\IDBObjectCache.cs" />

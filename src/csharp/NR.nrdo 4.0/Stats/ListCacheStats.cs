@@ -6,53 +6,35 @@ using System.Threading.Tasks;
 
 namespace NR.nrdo.Stats
 {
-    public sealed class ListCacheStats
+    public struct ListCacheStats
     {
         internal ListCacheStats(long skipped, long totalResultItems, int peakResultItems)
         {
-            this.skipped = skipped;
-            this.totalResultItems = totalResultItems;
-            this.peakResultItems = peakResultItems;
-        }
-        private ListCacheStats(ListCacheStats proto, CacheStats cacheStats)
-            : this(proto.skipped, proto.totalResultItems, proto.peakResultItems)
-        {
-            this.cacheStats = cacheStats;
-        }
-        internal ListCacheStats ForCacheStats(CacheStats cacheStats)
-        {
-            return new ListCacheStats(this, cacheStats);
+            this.Skipped = skipped;
+            this.TotalResultItems = totalResultItems;
+            this.PeakResultItems = peakResultItems;
         }
 
-        private readonly CacheStats cacheStats;
+        public long Skipped { get; }
 
-        private readonly long skipped;
-        public long Skipped { get { return skipped; } }
+        public long TotalResultItems { get; }
 
-        private readonly long totalResultItems;
-        public long TotalResultItems { get { return totalResultItems; } }
+        public int PeakResultItems { get; }
 
-        private readonly int peakResultItems;
-        public int PeakResultItems { get { return peakResultItems; } }
-
-        public long Misses { get { return cacheStats.NonHits - Skipped; } }
-
-        public double AverageResultItems { get { return cacheStats.TotalQueries == 0 ? 0 : (double)TotalResultItems / cacheStats.TotalQueries; } }
-        public double WeightedResultItems { get { return Math.Sqrt(PeakResultItems * AverageResultItems); } }
-
-        internal ListCacheStats WithNewResult(int resultItems, bool wasSkip)
+        internal ListCacheStats WithNewResult(int resultItems = 0, bool wasSkip = false)
         {
-            return new ListCacheStats(wasSkip ? skipped + 1 : skipped, totalResultItems + resultItems + 1, Math.Max(peakResultItems, resultItems + 1));
+            return new ListCacheStats(
+                wasSkip ? Skipped + 1 : Skipped,
+                TotalResultItems + resultItems + 1,
+                Math.Max(PeakResultItems, resultItems + 1));
         }
 
         public ListCacheStats Since(ListCacheStats prior)
         {
-            if (prior == null) return this;
-
             return new ListCacheStats(
-                skipped - prior.skipped,
-                totalResultItems - prior.totalResultItems,
-                peakResultItems);
+                Skipped - prior.Skipped,
+                TotalResultItems - prior.TotalResultItems,
+                PeakResultItems);
         }
     }
 }

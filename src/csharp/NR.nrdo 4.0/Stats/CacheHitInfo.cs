@@ -64,11 +64,13 @@ namespace NR.nrdo.Stats
         // New code should go through CacheStats/ListCacheStats directly, but these old properties need to exist for
         // backward compatibility, and have to be ints rather than longs for the same reason.
         public TimeSpan CumulativeTime { get { return CacheStats.CumulativeTime; } }
+        public TimeSpan CumulativeFailureTime { get { return CacheStats.CumulativeFailureTime; } }
         public TimeSpan AverageTime { get { return CacheStats.AverageTime; } }
         public int Hits { get { return (int)CacheStats.Hits; } }
-        public int Misses { get { return (int)(IsList ? CacheStats.ListStats.Misses : cacheStats.NonHits); } }
+        public int Misses { get { return (int)CacheStats.Misses; } }
         public int OverflowingMisses { get { return (int)CacheStats.NonHitsOverCapacity; } }
-        public int Skipped { get { return IsList ? (int)CacheStats.ListStats.Skipped : 0; } }
+        public int Skipped { get { return (int)CacheStats.ListStats.Skipped; } }
+        public int Failures { get { return (int)CacheStats.Failures; } }
 
         internal int tweakedDirectly;
         public int TweakedDirectly { get { return tweakedDirectly; } }
@@ -76,16 +78,6 @@ namespace NR.nrdo.Stats
         public int Iterated { get { return iterated; } }
         internal int tweakedByIteration;
         public int TweakedByIteration { get { return tweakedByIteration; } }
-
-        // These scores are not used by the current algorithm but kept for backward compatibility
-        public double InsufficiencyScore
-        {
-            get { return (double)OverflowingMisses * 1000 * Nrdo.CountCaches() / Nrdo.TotalQueries; }
-        }
-        public double ExcessivenessScore
-        {
-            get { return (double)itemCount * Nrdo.TotalQueries / (Nrdo.CountCaches() * (Hits + 1)); }
-        }
 
         private int itemCount
         {
@@ -112,7 +104,9 @@ namespace NR.nrdo.Stats
 
         public int CompareTo(CacheHitInfo info)
         {
-            int result = info.CumulativeTime.CompareTo(CumulativeTime);
+            int result = info.CumulativeFailureTime.CompareTo(CumulativeFailureTime);
+            if (result == 0) result = (info.Failures).CompareTo(Failures);
+            if (result == 0) result = info.CumulativeTime.CompareTo(CumulativeTime);
             if (result == 0) result = (info.Misses + info.Skipped).CompareTo(Misses + Skipped);
             if (result == 0) result = info.Misses.CompareTo(Misses);
             if (result == 0) result = info.OverflowingMisses.CompareTo(OverflowingMisses);

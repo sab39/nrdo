@@ -167,16 +167,16 @@ namespace NR.nrdo.Stats
 
                     //  - For list caches,
                     //    - Calculate PotentialCost: Max(PeakItemCount, ItemCapacity, Capacity * WeightedResultItems)
-                    var potentialCost = Math.Max(Math.Max(listCache.ItemCapacity, listCache.PeakItemCount), listCache.Capacity * listSinceGrow.WeightedResultItems);
+                    var potentialCost = Math.Max(Math.Max(listCache.ItemCapacity, listCache.PeakItemCount), listCache.Capacity * candidate.sinceGrow.WeightedResultItems);
 
                     //    - Calculate TargetCost = GrowthFactor * Max(PotentialCost, WeightedResultItems)
-                    var targetCost = Math.Min(growthFactor * Math.Max(potentialCost, candidate.hitInfo.CacheStats.ListStats.WeightedResultItems), Nrdo.MaxCacheCapacity);
+                    var targetCost = Math.Min(growthFactor * Math.Max(potentialCost, candidate.hitInfo.CacheStats.WeightedResultItems), Nrdo.MaxCacheCapacity);
 
                     //    - Calculate TargetCapacity = Max(TargetCost / WeightedResultItems, Capacity + 1)
-                    var targetCapacity = Math.Max((int)(targetCost / candidate.hitInfo.CacheStats.ListStats.WeightedResultItems), listCache.Capacity + 1);
+                    var targetCapacity = Math.Max((int)(targetCost / candidate.hitInfo.CacheStats.WeightedResultItems), listCache.Capacity + 1);
 
                     //      - If ItemCapacity < TargetCapacity * AvgResultItems or (Capacity = 0 and Skipped = 0)
-                    if (listCache.ItemCapacity < targetCapacity * candidate.hitInfo.CacheStats.ListStats.AverageResultItems ||
+                    if (listCache.ItemCapacity < targetCapacity * candidate.hitInfo.CacheStats.AverageResultItems ||
                         (listCache.Capacity == 0 && listSinceGrow.Skipped == 0))
                     {
                         //        - Set ItemCapacity = Max(TargetCost, ItemCapacity + 2)
@@ -186,7 +186,7 @@ namespace NR.nrdo.Stats
                     {
                         //        - Set Capacity = TargetCapacity and ItemCapacity = TargetCapacity * AvgResultItems
                         listCache.Capacity = targetCapacity;
-                        listCache.ItemCapacity = (int)(targetCapacity * candidate.hitInfo.CacheStats.ListStats.AverageResultItems);
+                        listCache.ItemCapacity = (int)(targetCapacity * candidate.hitInfo.CacheStats.AverageResultItems);
                     }
                 }
                 candidate.hitInfo.growCount++;
@@ -304,7 +304,7 @@ namespace NR.nrdo.Stats
                     }
                     else if (listCache.ItemCapacity == 0 && listCache.Capacity == 1)
                     {
-                        listCache.ItemCapacity = (int)candidate.hitInfo.CacheStats.ListStats.AverageResultItems + 1;
+                        listCache.ItemCapacity = (int)candidate.hitInfo.CacheStats.AverageResultItems + 1;
                         listCache.Capacity = 0;
                     }
                     else
