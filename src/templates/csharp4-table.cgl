@@ -32,7 +32,7 @@ template {
     };
 
     inside gets given {
-      fields; params; gname; getdesc; multi; tables; orderby
+      fields; params; gname; getdesc; multi; tables; orderby; custom_impl;
     } {
 
       # Construct "arguments" by concatenating fields with params.
@@ -44,6 +44,7 @@ template {
       set Getdesc initcap $getdesc$;
       set GType {when $multi$ [Multi]; else [Single]};
       set GClass {when $multi$ [List<$Class$>]; else $Class$};
+	  set custom_impl {default custom_impl};
       inside tables given {tblmodule; tbldbobject; tblexisting} {
         set tblname {
           when $tblexisting$ $tblexisting$;
@@ -378,7 +379,11 @@ when {defined csharp-code} [$csharp-code$];
     sep [, ] forall $arguments$ [$Wtype$ @$fFull$]; [) {];
     when $nocode$ [
       throw new InvalidOperationException();];
-    else {
+    else when $custom_impl$ {[
+	  return $custom_impl$(];
+      sep [, ] forall $arguments$ [@$fFull$];
+	  [);];
+	}; else {
       forall $fields$ when {not $nullable$} {[
         if (@$fFull$ == null) return ]; when $multi$ [new List<$Class$>()]; else [null]; [;];
       }; [
@@ -387,7 +392,7 @@ when {defined csharp-code} [$csharp-code$];
       [));];
     }; [
   }];
-  when {not $nocode$} {
+  when {not {anyof $nocode$ $custom_impl$}} {
     [public static $GClass$ GetBy$GName$(];
       sep [, ] {[DataBase dataBase]; forall $arguments$ [$Wtype$ @$fFull$]}; [) {];
       forall $fields$ when {not $nullable$} {[
