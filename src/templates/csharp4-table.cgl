@@ -934,7 +934,8 @@ when {defined csharp-code} [$csharp-code$];
   ]; [
 
   public override void PreUpdateRefs() {
-    if (IsNew) {];
+    if (IsNew) {
+	  copyInitialValuesOnDeserialize();];
       forall $fields$ when $readonly-ref-name$ [
         if (initial_$readonly-rName$ != null && (@$readonly-rName$ == null || @$readonly-rName$ == initial_$readonly-rName$)) {
           if (initial_$readonly-rName$.IsNew) initial_$readonly-rName$.Update();
